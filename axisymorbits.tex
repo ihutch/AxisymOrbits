@@ -73,6 +73,11 @@ Department of Nuclear Science and Engineering,\\ \dateskip
 Massachusetts Institute of Technology, Cambridge, MA 02139, USA}
 \maketitle
 
+\ifagu
+\subsection*{Key Points}
+\input 3keypoints.tex
+\fi
+
 \begin{abstract}
   Electron orbits are calculated in solitary two-dimensional
   axisymmetric electrostatic potential structures, typical of plasma
@@ -91,7 +96,7 @@ Massachusetts Institute of Technology, Cambridge, MA 02139, USA}
   quantitative algorithm is given, and its results plotted as a
   function of magnetic field strength and hole radial scale-length,
   determining the phase space volume available to sustain the electron
-  hole by depression of the permanently trapped distribution function,
+  hole by depression of the permanently trapped distribution function.
 \end{abstract}
 
 \ifagu\begin{article}\fi
@@ -1171,6 +1176,12 @@ efficiently obtain by iteration $I_m$ and $J_m$ for $m$ as high as required.
 This iterative scheme has been implemented and verified, and is used
 to give the island plots in this paper.
 
+\section*{Acknowledgements}
+I am grateful for useful discussions about transverse structure of
+electron holes with Ivan Vasko. The codes that were used to do the
+calculations and create the figures in this article are publically
+available at \url{https://github.com/ihutch/AxisymOrbits}. This work
+was partially funded  by NASA grant NNX16AG82G.
 
 \bibliography{MyAll}
 \ifagu\end{article}\fi
