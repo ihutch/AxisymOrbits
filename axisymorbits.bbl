@@ -1,0 +1,292 @@
+\begin{thebibliography}{47}
+\providecommand{\natexlab}[1]{#1}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+
+\bibitem[{\textit{Andersson et~al.}(2009)}]{Andersson2009}
+Andersson, L., et~al. (2009), {New features of electron phase space holes
+  observed by the THEMIS mission}, \textit{Physical Review Letters},
+  \textit{102}(22), 225,004, \doi{10.1103/PhysRevLett.102.225004}.
+
+\bibitem[{\textit{Bale et~al.}(1998)\textit{Bale, Kellogg, Larsen, Lin, Goetz,
+  and Lepping}}]{Bale1998}
+Bale, S.~D., P.~J. Kellogg, D.~E. Larsen, R.~P. Lin, K.~Goetz, and R.~P.
+  Lepping (1998), {Bipolar electrostatic structures in the shock transition
+  region: Evidence of electron phase space holes}, \textit{Geophysical Research
+  Letters}, \textit{25}(15), 2929--2932, \doi{10.1029/98GL02111}.
+
+\bibitem[{\textit{Berk et~al.}(1970)\textit{Berk, Nielsen, and
+  Roberts}}]{Berk1970}
+Berk, H.~L., C.~E. Nielsen, and K.~V. Roberts (1970), {Phase Space
+  Hydrodynamics of Equivalent Nonlinear Systems: Experimental and Computational
+  Observations}, \textit{Physics of Fluids}, \textit{13}(4), 980,
+  \doi{10.1063/1.1693039}.
+
+\bibitem[{\textit{Bernstein et~al.}(1957)\textit{Bernstein, Greene, and
+  Kruskal}}]{Bernstein1957}
+Bernstein, I.~B., J.~M. Greene, and M.~D. Kruskal (1957), {Exact nonlinear
+  plasma oscillations}, \textit{Physical Review}, \textit{108}(4), 546--550.
+
+\bibitem[{\textit{Chen and Parks}(2002)}]{Chen2002}
+Chen, L.-J., and G.~K. Parks (2002), {BGK electron solitary waves in 3D
+  magnetized plasma}, \textit{Geophysical Research Letters}, \textit{29}(9),
+  41--45, \doi{10.1029/2001GL013385}.
+
+\bibitem[{\textit{Chirikov}(1960)}]{Chirikov1960}
+Chirikov, B.~V. (1960), {Resonance processes in magnetic traps}, \textit{The
+  Soviet Journal of Atomic Energy}, \textit{6}(6), 464--470,
+  \doi{10.1007/BF01483352}.
+
+\bibitem[{\textit{Chirikov}(1979)}]{Chirikov1979}
+Chirikov, B.~V. (1979), {A universal instability of many-dimensional oscillator
+  systems}, \textit{Physics Reports}, \textit{52}(5), 263--379,
+  \doi{10.1016/0370-1573(79)90023-1}.
+
+\bibitem[{\textit{Eliasson and Shukla}(2006)}]{Eliasson2006}
+Eliasson, B., and P.~K. Shukla (2006), {Formation and dynamics of coherent
+  structures involving phase-space vortices in plasmas}, \textit{Physics
+  Reports}, \textit{422}(6), 225--290, \doi{10.1016/j.physrep.2005.10.003}.
+
+\bibitem[{\textit{Ergun et~al.}(1998)\textit{Ergun, Carlson, McFadden, Mozer,
+  Muschietti, Roth, and Strangeway}}]{Ergun1998}
+Ergun, R.~E., C.~W. Carlson, J.~P. McFadden, F.~S. Mozer, L.~Muschietti,
+  I.~Roth, and R.~J. Strangeway (1998), {Debye-Scale Plasma Structures
+  Associated with Magnetic-Field-Aligned Electric Fields}, \textit{Physical
+  Review Letters}, \textit{81}(4), 826--829, \doi{10.1103/PhysRevLett.81.826}.
+
+\bibitem[{\textit{Franz et~al.}(2000)\textit{Franz, Kintner, Seyler, Pickett,
+  and Scudder}}]{Franz2000}
+Franz, J.~R., P.~M. Kintner, C.~E. Seyler, J.~S. Pickett, and J.~D. Scudder
+  (2000), {On the perpendicular scale of electron phase-space holes},
+  \textit{Geophysical Research Letters}, \textit{27}(2), 169--172,
+  \doi{10.1029/1999GL010733}.
+
+\bibitem[{\textit{Goldman et~al.}(1999)\textit{Goldman, Oppenheim, and
+  Newman}}]{Goldman1999}
+Goldman, M.~V., M.~M. Oppenheim, and D.~L. Newman (1999), {Nonlinear two-stream
+  instabilities as an explanation for auroral bipolar wave structures},
+  \textit{Geophysical Research Letters}, \textit{26}(13), 1821--1824,
+  \doi{10.1029/1999GL900435}.
+
+\bibitem[{\textit{Holmes et~al.}(2018)}]{Holmes2018}
+Holmes, J.~C., et~al. (2018), {Electron Phase-Space Holes in Three Dimensions:
+  Multispacecraft Observations by Magnetospheric Multiscale}, \textit{Journal
+  of Geophysical Research: Space Physics}, \textit{123}(12), 9963--9978,
+  \doi{10.1029/2018JA025750}.
+
+\bibitem[{\textit{Hutchinson}(2017)}]{Hutchinson2017}
+Hutchinson, I.~H. (2017), {Electron holes in phase space: What they are and why
+  they matter}, \textit{Physics of Plasmas}, \textit{24}(5), 055,601,
+  \doi{10.1063/1.4976854}.
+
+\bibitem[{\textit{Hutchinson}(2018{\natexlab{a}})}]{Hutchinson2018}
+Hutchinson, I.~H. (2018{\natexlab{a}}), {Kinematic Mechanism of Plasma Electron
+  Hole Transverse Instability}, \textit{Physical Review Letters},
+  \textit{120}(20), 205,101, \doi{10.1103/PhysRevLett.120.205101}.
+
+\bibitem[{\textit{Hutchinson}(2018{\natexlab{b}})}]{Hutchinson2018a}
+Hutchinson, I.~H. (2018{\natexlab{b}}), {Transverse instability of electron
+  phase-space holes in multi-dimensional Maxwellian plasmas}, \textit{Journal
+  of Plasma Physics}, \textit{84}, 905840,411, \doi{10.1017/S0022377818000909}.
+
+\bibitem[{\textit{Hutchinson}(2019{\natexlab{a}})}]{Hutchinson2019}
+Hutchinson, I.~H. (2019{\natexlab{a}}), {Transverse instability magnetic field
+  thresholds of electron phase-space holes}, \textit{Physical Review E},
+  \textit{99}, 053,209, \doi{10.1103/PhysRevE.99.053209}.
+
+\bibitem[{\textit{Hutchinson}(2019{\natexlab{b}})}]{Hutchinson2019a}
+Hutchinson, I.~H. (2019{\natexlab{b}}), {Electron phase-space hole transverse
+  instability at high magnetic field}, \textit{Journal of Plasma Physics},
+  \textit{85}(5), \doi{10.1017/S0022377819000564}.
+
+\bibitem[{\textit{Hutchinson and Malaspina}(2018)}]{Hutchinson2018b}
+Hutchinson, I.~H., and D.~M. Malaspina (2018), {Prediction and Observation of
+  Electron Instabilities and Phase Space Holes Concentrated in the Lunar Plasma
+  Wake}, \textit{Geophysical Research Letters}, \textit{45}, 3838--3845,
+  \doi{10.1029/2017GL076880}.
+
+\bibitem[{\textit{Jovanovi{\'{c}} et~al.}(2002)\textit{Jovanovi{\'{c}}, Shukla,
+  Stenflo, and Pegoraro}}]{Jovanovic2002a}
+Jovanovi{\'{c}}, D., P.~K. Shukla, L.~Stenflo, and F.~Pegoraro (2002),
+  {Nonlinear model for electron phase-space holes in magnetized space plasmas},
+  \textit{Journal of Geophysical Research: Space Physics}, \textit{107}(A7),
+  1--6, \doi{10.1029/2001JA900180}.
+
+\bibitem[{\textit{Krasovsky et~al.}(2004)\textit{Krasovsky, Matsumoto, and
+  Omura}}]{Krasovsky2004}
+Krasovsky, V.~L., H.~Matsumoto, and Y.~Omura (2004), {Effect of
+  trapped-particle deficit and structure of localized electrostatic
+  perturbations of different dimensionality}, \textit{Journal of Geophysical
+  Research: Space Physics}, \textit{109}(A4), A04,217,
+  \doi{10.1029/2003JA010198}.
+
+\bibitem[{\textit{Krasovsky et~al.}(2006)\textit{Krasovsky, Matsumoto, and
+  Omura}}]{Krasovsky2006}
+Krasovsky, V.~L., H.~Matsumoto, and Y.~Omura (2006), {Condition for charged
+  particle trapping in a three-dimensional electrostatic potential well in the
+  presence of a magnetic field}, \textit{Physica Scripta}, \textit{74}(2),
+  227--231, \doi{10.1088/0031-8949/74/2/014}.
+
+\bibitem[{\textit{Lu et~al.}(2008)\textit{Lu, Lembege, Tao, and Wang}}]{Lu2008}
+Lu, Q.~M., B.~Lembege, J.~B. Tao, and S.~Wang (2008), {Perpendicular electric
+  field in two-dimensional electron phase-holes: A parameter study},
+  \textit{Journal of Geophysical Research}, \textit{113}(A11), A11,219,
+  \doi{10.1029/2008JA013693}.
+
+\bibitem[{\textit{Malaspina et~al.}(2013)\textit{Malaspina, Newman, Willson,
+  Goetz, Kellogg, and Kerstin}}]{Malaspina2013}
+Malaspina, D.~M., D.~L. Newman, L.~B. Willson, K.~Goetz, P.~J. Kellogg, and
+  K.~Kerstin (2013), {Electrostatic solitary waves in the solar wind: Evidence
+  for instability at solar wind current sheets}, \textit{Journal of Geophysical
+  Research: Space Physics}, \textit{118}(2), 591--599,
+  \doi{10.1002/jgra.50102}.
+
+\bibitem[{\textit{Malaspina et~al.}(2014)\textit{Malaspina, Andersson, Ergun,
+  Wygant, Bonnell, Kletzing, Reeves, Skoug, and Larsen}}]{Malaspina2014}
+Malaspina, D.~M., L.~Andersson, R.~E. Ergun, J.~R. Wygant, J.~W. Bonnell,
+  C.~Kletzing, G.~D. Reeves, R.~M. Skoug, and B.~A. Larsen (2014), {Nonlinear
+  electric field structures in the inner magnetosphere}, \textit{Geophysical
+  Research Letters}, \textit{41}, 5693--5701, \doi{10.1002/2014GL061109}.
+
+\bibitem[{\textit{Mangeney et~al.}(1999)}]{Mangeney1999}
+Mangeney, A., et~al. (1999), {WIND observations of coherent electrostatic waves
+  in the solar wind}, \textit{Annales Geophysicae}, \textit{17}(3), 307--320,
+  \doi{10.1007/s00585-999-0307-y}.
+
+\bibitem[{\textit{Matsumoto et~al.}(1994)\textit{Matsumoto, Kojima, Miyatake,
+  Omura, Okada, Nagano, and Tsutsui}}]{Matsumoto1994}
+Matsumoto, H., H.~Kojima, T.~Miyatake, Y.~Omura, M.~Okada, I.~Nagano, and
+  M.~Tsutsui (1994), {Electrostatic solitary waves (ESW) in the magnetotail:
+  BEN wave forms observed by GEOTAIL}, \textit{Geophysical Research Letters},
+  \textit{21}(25), 2915--2918, \doi{10.1029/94GL01284}.
+
+\bibitem[{\textit{Meiss}(1992)}]{Meiss1992}
+Meiss, J.~D. (1992), {Symplectic maps, variational principles, and transport},
+  \textit{Reviews of Modern Physics}, \textit{64}(3), 795--848,
+  \doi{10.1103/RevModPhys.64.795}.
+
+\bibitem[{\textit{Miyake et~al.}(1998)\textit{Miyake, Omura, Matsumoto, and
+  Kojima}}]{Miyake1998a}
+Miyake, T., Y.~Omura, H.~Matsumoto, and H.~Kojima (1998), {Two-dimensional
+  computer simulations of electrostatic solitary waves observed by Geotail
+  spacecraft}, \textit{Journal of Geophysical Research}, \textit{103}(A6),
+  11,841, \doi{10.1029/98JA00760}.
+
+\bibitem[{\textit{Morse and Nielson}(1969)}]{Morse1969}
+Morse, R.~L., and C.~W. Nielson (1969), {One-, two-, and three-dimensional
+  numerical simulation of two-Beam plasmas}, \textit{Physical Review Letters},
+  \textit{23}(19), 1087--1090, \doi{10.1103/PhysRevLett.23.1087}.
+
+\bibitem[{\textit{Mottez et~al.}(1997)\textit{Mottez, Perraut, Roux, and
+  Louarn}}]{Mottez1997}
+Mottez, F., S.~Perraut, A.~Roux, and P.~Louarn (1997), {Coherent structures in
+  the magnetotail triggered by counterstreaming electron beams},
+  \textit{Journal of Geophysical Research}, \textit{102}(A6), 11,399,
+  \doi{10.1029/97JA00385}.
+
+\bibitem[{\textit{Mozer et~al.}(2016)}]{Mozer2016}
+Mozer, F.~S., et~al. (2016), {Magnetospheric Multiscale Satellite Observations
+  of Parallel Electron Acceleration in Magnetic Field Reconnection by Fermi
+  Reflection from Time Domain Structures}, \textit{Physical Review Letters},
+  \textit{116}(14), 4--8, \doi{10.1103/PhysRevLett.116.145101}.
+
+\bibitem[{\textit{Mozer et~al.}(2018)\textit{Mozer, Agapitov, Giles, and
+  Vasko}}]{Mozer2018}
+Mozer, F.~S., O.~V. Agapitov, B.~Giles, and I.~Vasko (2018), {Direct
+  Observation of Electron Distributions inside Millisecond Duration Electron
+  Holes}, \textit{Physical Review Letters}, \textit{121}(13), 135,102,
+  \doi{10.1103/PhysRevLett.121.135102}.
+
+\bibitem[{\textit{Muschietti et~al.}(2000)\textit{Muschietti, Roth, Carlson,
+  and Ergun}}]{Muschietti2000}
+Muschietti, L., I.~Roth, C.~W. Carlson, and R.~E. Ergun (2000), {Transverse
+  instability of magnetized electron holes}, \textit{Physical Review Letters},
+  \textit{85}(1), 94--97.
+
+\bibitem[{\textit{Ng and Bhattacharjee}(2005)}]{Ng2005}
+Ng, C.~S., and A.~Bhattacharjee (2005), {Bernstein-greene-kruskal modes in a
+  three-dimensional plasma}, \textit{Physical Review Letters}, \textit{95}(24),
+  245,004, \doi{10.1103/PhysRevLett.95.245004}.
+
+\bibitem[{\textit{Ng et~al.}(2006)\textit{Ng, Bhattacharjee, and
+  Skiff}}]{Ng2006}
+Ng, C.~S., A.~Bhattacharjee, and F.~Skiff (2006), {Weakly collisional Landau
+  damping and three-dimensional Bernstein-Greene-Kruskal modes: New results on
+  old problems}, \textit{Physics of Plasmas}, \textit{13}(5), 55,903,
+  \doi{10.1063/1.2186187}.
+
+\bibitem[{\textit{Omura et~al.}(1996)\textit{Omura, Matsumoto, Miyake, and
+  Kojima}}]{Omura1996}
+Omura, Y., H.~Matsumoto, T.~Miyake, and H.~Kojima (1996), {Electron beam
+  instabilities as generation mechanism of electrostatic solitary waves in the
+  magnetotail}, \textit{Journal of Geophysical Research}, \textit{101}(A2),
+  2685, \doi{10.1029/95JA03145}.
+
+\bibitem[{\textit{Oppenheim et~al.}(1999)\textit{Oppenheim, Newman, and
+  Goldman}}]{Oppenheim1999}
+Oppenheim, M., D.~L. Newman, and M.~V. Goldman (1999), {Evolution of Electron
+  Phase-Space Holes in a 2D Magnetized Plasma}, \textit{Physical Review
+  Letters}, \textit{83}(12), 2344--2347, \doi{10.1103/PhysRevLett.83.2344}.
+
+\bibitem[{\textit{Oppenheim et~al.}(2001)\textit{Oppenheim, Vetoulis, Newman,
+  and Goldman}}]{Oppenheim2001b}
+Oppenheim, M.~M., G.~Vetoulis, D.~L. Newman, and M.~V. Goldman (2001),
+  {Evolution of electron phase-space holes in 3D}, \textit{Geophysical Research
+  Letters}, \textit{28}(9), 1891--1894, \doi{10.1029/2000GL012383}.
+
+\bibitem[{\textit{Pickett et~al.}(2008)}]{Pickett2008}
+Pickett, J.~S., et~al. (2008), {Furthering our understanding of electrostatic
+  solitary waves through Cluster multispacecraft observations and theory},
+  \textit{Advances in Space Research}, \textit{41}(10), 1666--1676,
+  \doi{10.1016/j.asr.2007.05.064}.
+
+\bibitem[{\textit{Schamel}(1979)}]{Schamel1979}
+Schamel, H. (1979), {Theory of Electron Holes}, \textit{Physica Scripta},
+  \textit{20}(3-4), 336--342, \doi{10.1088/0031-8949/20/3-4/006}.
+
+\bibitem[{\textit{Schamel}(1986)}]{Schamel1986a}
+Schamel, H. (1986), {Electrostatic Phase Space Structures in Theory and
+  Experiment}, \textit{Physics Reports}, \textit{140}(3), 161--191.
+
+\bibitem[{\textit{Singh et~al.}(2001)\textit{Singh, Loo, and
+  Wells}}]{Singh2001}
+Singh, N., S.~M. Loo, and B.~E. Wells (2001), {Electron hole structure and its
+  stability depending on plasma magnetization}, \textit{Journal of Geophysical
+  Research}, \textit{106}(A10), 21,183--21,198, \doi{10.1029/2001JA900056}.
+
+\bibitem[{\textit{Tong et~al.}(2018)}]{Tong2018}
+Tong, Y., et~al. (2018), {Simultaneous Multispacecraft Probing of Electron
+  Phase Space Holes}, \textit{Geophysical Research Letters}, \textit{45}(21),
+  11,513--11,519, \doi{10.1029/2018GL079044}.
+
+\bibitem[{\textit{Turikov}(1984)}]{Turikov1984}
+Turikov, V.~A. (1984), {Electron Phase Space Holes as Localized BGK Solutions},
+  \textit{Physica Scripta}, \textit{30}(1), 73--77,
+  \doi{10.1088/0031-8949/30/1/015}.
+
+\bibitem[{\textit{Vasko et~al.}(2015)\textit{Vasko, Agapitov, Mozer, Artemyev,
+  and Jovanovic}}]{Vasko2015}
+Vasko, I.~Y., O.~V. Agapitov, F.~Mozer, A.~V. Artemyev, and D.~Jovanovic
+  (2015), {Magnetic field depression within electron holes},
+  \textit{Geophysical Research Letters}, \textit{42}(7), 2123--2129,
+  \doi{10.1002/2015GL063370}.
+
+\bibitem[{\textit{Vasko et~al.}(2017)\textit{Vasko, Agapitov, Mozer, Artemyev,
+  Drake, and Kuzichev}}]{Vasko2017}
+Vasko, I.~Y., O.~V. Agapitov, F.~S. Mozer, A.~V. Artemyev, J.~F. Drake, and
+  I.~V. Kuzichev (2017), {Electron holes in the outer radiation belt:
+  Characteristics and their role in electron energization}, \textit{Journal of
+  Geophysical Research: Space Physics}, \textit{122}(1), 120--135,
+  \doi{10.1002/2016JA023083}.
+
+\bibitem[{\textit{Wilson et~al.}(2010)\textit{Wilson, Cattell, Kellogg, Goetz,
+  Kersten, Kasper, Szabo, and Wilber}}]{Wilson2010}
+Wilson, L.~B., C.~A. Cattell, P.~J. Kellogg, K.~Goetz, K.~Kersten, J.~C.
+  Kasper, A.~Szabo, and M.~Wilber (2010), {Large-amplitude electrostatic waves
+  observed at a supercritical interplanetary shock}, \textit{Journal of
+  Geophysical Research: Space Physics}, \textit{115}(12), A12,104,
+  \doi{10.1029/2010JA015332}.
+
+\end{thebibliography}
