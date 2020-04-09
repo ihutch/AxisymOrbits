@@ -5,4 +5,4 @@ Particle Trapping in Axisymmetric Electron Holes (submitted to JGR).
 If you really want to try to reproduce the results then clone this repo. If you are on a linux machine, the
 executable file may simply run. In that case you can regenerate almost all the figures by doing . plotcomp.sh
 If you need to recompile the code, try "make <executable_name>". If you want to know what the programs do, 
-read the paper and read the fortran (.f90) files! Good luck!
+read the paper and read the fortran (.f90) files! Good luck! [The 9 Apr 2020 release has been archived at Zenodo.]
