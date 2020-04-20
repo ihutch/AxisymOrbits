@@ -296,8 +296,11 @@ subroutine orbitp
   enddo
   write(*,'(3f7.4,a)')Bsqpsi,wpt,Eropsi*sqrt(2.*(w0/psi-wpt)) &
        ,'   b,wpt,Erovpsi3'
-
-
+  do n=2,10,2
+     wpr=((2.*B**2/n**2)**(-0.25)+1-2.**.25)**(-4)
+!     write(*,'(i2,5f8.4)')n,wpr,B,psi,W0
+!     call polyline([-1.,1.],[-wpr,-wpr],2)
+  enddo
   call pltend
   
   if(nwp.eq.1)call doplots(imax,wp0,w0,pt0)  

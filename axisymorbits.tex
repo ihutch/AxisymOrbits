@@ -1,52 +1,56 @@
-\documentclass[draft,jgrga]{agutex}
-%\documentclass[jgrga]{agutex}
-%\documentclass[12pt]{article}
-%%%% Use just one of the above documentclass lines.
-%%%% Switch ifagu to true or false automatically.
-\newif\ifagu
-\ifx\specialeqnum\undefined\else\agutrue\fi
-\agutrue
-% And rerun bibtex if changing.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{amssymb}
-\usepackage{amsmath}
-\usepackage{bm}
-\usepackage{graphicx}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\ifagu          %%%%%%%%%%%%%%%%%%%% Use aguclass and styles
+%\documentclass{agujournal2019} %dummy
+\newif\ifagu\agufalse
+%%%% Switch ifagu to true or false % And rerun bibtex if changing.
+\ifagu
+\documentclass{agujournal2019}
   \usepackage{url}
-  \setkeys{Gin}{draft=false} % Make figures included in place.
+%  \setkeys{Gin}{draft=false} % Make figures included in place.
 % Comment the \linenumbers, not the lineno. But there may be other
 % problems that might require us to define dummy linenomath environment.
   \usepackage[]{lineno} \linenumbers*[1] 
-  \setlength\linenumbersep{3pt}  %This fits numbers better.
-% This is a way to fix equations and align.
+  \usepackage[inline]{trackchanges}
+  \usepackage{soul}
+  \draftfalse
+  \journalname{JGR: Space Physics}
+% This is a way to fix equations and align for linenumbers.
+ \usepackage{amsmath} % Must be loaded before fix.
  \let\oldequation\equation
  \let\oldendequation\endequation
-\renewenvironment{equation}
+  \renewenvironment{equation}
   {\linenomathNonumbers\oldequation}
   {\oldendequation\endlinenomath}
  \let\oldalign\align
  \let\oldendalign\endalign
-\renewenvironment{align}
+  \renewenvironment{align}
   {\linenomathNonumbers\oldalign}
   {\oldendalign\endlinenomath}
-% Bibstyle and fix a couple of incompatibilities.
-  \bibliographystyle{agu08}
+% Fix a couple of incompatibilities.
   \def\maketitle{}
   \def\dateskip{}
-\else             %%%%%%%%%%%%%%%%%%% Plain latex formating.
+  \def\citep{\cite}
+\else
+\documentclass[12pt]{article}
  \usepackage[margin=1in]{geometry}
  \usepackage{hyperref}
+ \usepackage{amsmath}
  \usepackage[sort&compress,numbers]{natbib}
  \bibliographystyle{unsrtnatIH}
+ \def\authors#1{\author{#1}}
  \def\authoraddr#1{}
  \def\authorrunninghead#1{}
  \def\titlerunninghead#1{}
  \date{}
- \def\affil#1{\date{#1}}
+ \def\affil#1{$^{#1}$}
+ \def\affiliation#1#2{\date{$^{#1}$#2}}
+ \def\correspondingauthor#1#2{}
+ %\def\affil#1{\date{#1}}
  \def\dateskip{\medskip}
 \fi
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{graphicx}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Personal Macros.   For brevity.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -58,24 +62,25 @@
 \def\wrn{w_{\parallel R n}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\authorrunninghead{Hutchinson}
-\titlerunninghead{Trapping in Axisymmetric Electron Holes}
-\authoraddr{I H Hutchinson
-Plasma Science and Fusion Center and
-Department of Nuclear Science and Engineering,
-Massachusetts Institute of Technology, Cambridge, MA 02139, USA}
-
 \begin{document}
 \title{Particle Trapping in Axisymmetric Electron Holes}
-\author{I H Hutchinson}
-\affil{Plasma Science and Fusion Center\\ and
+\authors{I H Hutchinson}
+\affiliation{}{Plasma Science and Fusion Center\\ and
 Department of Nuclear Science and Engineering,\\ \dateskip
-Massachusetts Institute of Technology, Cambridge, MA 02139, USA}
+Massachusetts Institute of Technology, Cambridge, MA 02139, USA.}
+
 \maketitle
 
 \ifagu
-\subsection*{Key Points}
-\input 3keypoints.tex
+\begin{keypoints}
+\item Electron holes of finite transverse extent are subject to trapped orbit
+losses arising from the violation of magnetic moment conservation.
+\item  Detrapping is calculated analytically and verified by numerical
+orbit integration, finding the phase space that can sustain the hole.
+\item The results appear to offer a qualitative explanation for some
+trends concerning electron hole aspect-ratio observed in space
+plasmas.
+\end{keypoints}
 \fi
 
 \begin{abstract}
@@ -99,7 +104,7 @@ Massachusetts Institute of Technology, Cambridge, MA 02139, USA}
   hole by depression of the permanently trapped distribution function.
 \end{abstract}
 
-\ifagu\begin{article}\fi
+%\ifagu\begin{article}\fi
 \section{Background}
 
 Electron holes are steady solitary electrostatic positive potential
@@ -639,7 +644,7 @@ $\wp\to0$. In their respective limits, these two terms give
 the correct values for $E_2$, in agreement with eqs.\
 \ref{eq:fouriermodes} and \ref{eq:E2}. In the $\wp\to1$ limit,
 the higher harmonics have appropriate scaling with
-$1-\sqrt{\wp}$. Their denominator $n/2$ has not been
+$1-\sqrt{\wp}$. Their numerator $n/2$ has not been
 derived; nor has the inverse form of the
 interpolation. Nevertheless, a comparison between this expression and
 numerical calculation of the Fourier harmonics, shows remarkably good
@@ -1180,11 +1185,10 @@ to give the island plots in this paper.
 I am grateful for useful discussions about transverse structure of
 electron holes with Ivan Vasko. The codes that were used to do the
 calculations and create the figures in this article are publically
-available at \url{https://github.com/ihutch/AxisymOrbits}. This work
+available at \url{doi:10.5281/zenodo.3746740}. This work
 was partially funded  by NASA grant NNX16AG82G.
 
 \bibliography{MyAll}
-\ifagu\end{article}\fi
 
 \ifremnants\input remnants.tex\fi
 

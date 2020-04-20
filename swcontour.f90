@@ -174,6 +174,7 @@ program docontours
      n=2*k
 !     wpr=wp2*4/n**2
      wpr=((2.*B**2/n**2)**(-0.25)+1-2.**.25)**(-4)
+!     write(*,'(a,i2,5f8.4)')'n,wpr,B  ',n,wpr,B
 485 format(a,i4,a,f8.5,a,f8.5,a,f8.5,a,f8.5,a,f8.5,a,f8.5)
      write(*,485)'n=',n,' wpr=',wpr,' 4B^2/n^2=',4.*B**2/n**2
      if(abs(wpr-wprm).lt.0.03)exit
