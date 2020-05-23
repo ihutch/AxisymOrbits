@@ -89,7 +89,8 @@ plasmas.
   electron holes, in order to establish the conditions for the
   particles to remain trapped.  Analytic calculations of the evolution
   of the parallel energy caused by the perturbing radial electric
-  field are shown to agree well with full numerical orbit integration
+  field (breaking magnetic-moment invariance) 
+  are shown to agree well with full numerical orbit integration
   Poincar\'e plots. The predominant mechanism of detrapping is
   resonance between the gyro frequency in the parallel magnetic field
   and harmonics of the parallel bounce frequency. A region of
@@ -190,7 +191,7 @@ We work in units where time is measured in inverse plasma frequencies
 potential) in electron temperatures ($T_e$). Thus if primes denote
 dimensioned parameters, and unprimed the normalized quantities,
 $t=\omega_p't'$, $\bm{x}=\bm{x}'/\lambda_{De}'$, and energy
-$W=W'/eT_e$. The parameters $T_e$ and $n_e$ are the temperature and
+$W=W'/T_e$. The parameters $T_e$ and $n_e$ are the temperature and
 density of the unperturbed electron distribution far from the hole.
 In these units the electron mass is eliminated from the equations, and
 the electron charge is $q_e=-1$, so the total energy of an electron
@@ -268,11 +269,11 @@ that $W>0$?
 
 An earlier attempt on this problem used a more complicated treatment
 based on an ``approximate invariant'' \citep{Krasovsky2006} but was
-not carried through to a comprehensive result.  Here,
-instead, we approach the solution quantitatively in a perturbative
-manner, treating the changes to the magnetic moment as small and
-slow. This is justified if the transverse electric field (arising from
-transverse non-uniformity of $\phi$) is small in the sense that
+not carried through to a comprehensive result.  Here, instead, we
+approach the solution quantitatively in a perturbative manner,
+treating the changes to the magnetic moment as small and slow. This is
+justified if the transverse electric field (arising from transverse
+non-uniformity of $\phi$) is small in the sense that
 $E_r/\phi\ll 1/\rho$, which may also be written $L_\perp\gg \rho$,
 where $L_\perp \equiv \phi/E_r=\phi/|\partial \phi/\partial r|$ is the
 transverse length scale of potential variation. It is this electric
@@ -295,10 +296,11 @@ $W_\parallel$, which is simply the 1D orbit problem. Moreover
 $E_r(t)=E_r(r,z(t))=-\partial \phi(r,z(t))/\partial r$ can be
 approximated as being at fixed radius $r$ (again provided $\rho$ is
 small enough relative to $L_\perp$). The instanteous energy transfer
-rate is simply the rate of doing work on the electron by $E_r$, namely
+rate (recalling that $W_\parallel+W_\perp$ is exactly conserved) is
+simply the rate of doing work on the electron by $E_r$, namely
 \begin{equation}
   \label{eq:workrate}
-  {dW_\parallel\over dt} = -E_r(t) v_r(t).
+  {dW_\parallel\over dt} = -{dW_\perp\over dt}= -E_r(t) v_r(t).
 \end{equation}
 The important velocity component in this equation arises from the gyro
 motion of the electron, $v_r=v_\perp \cos(\Omega t)$. When this
@@ -319,7 +321,7 @@ $\omega_b$, the orbits can become stochastic and the islands broken
 up. Very generally, stochasticity begins in Hamiltonian systems
 approximately when there is overlap between the separatrices of
 adjacent islands \citep{Chirikov1979,Meiss1992}. Indeed, this
-principle is often called the Chirikov criterion in recognition of its
+principle is called the Chirikov criterion in recognition of its
 discoverer who studied resonances between gyro motion and bounces
 along the magnetic field in magnetic traps \citep{Chirikov1960}: a
 close analog of our current concern.  If an orbit is stochastic, it is
@@ -973,7 +975,7 @@ permanently trapped orbits even up to the largest perturbation
 strength shown.
 
 In Fig.\ \ref{fig:trapdomain}(b) are shown vertical profiles through
-the contours at three values of the perturbation strength, giving
+the contours at four values of the perturbation strength, giving
 $W_{\parallel t}$ as a function of $b$. These lines are each
 accompanied by points, each of which comes from full numerical orbit
 integration. A point gives the lowest starting energy that escapes
