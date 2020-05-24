@@ -99,7 +99,8 @@ contains
 1     continue
       call geteye(x2,y2,z2)
       call pltinit(0.,1.,0.,1.)
-      call scale3(xmin,xmax,ymin,ymax,-5.,5.)
+!      call scale3(xmin,xmax,ymin,ymax,-5.,5.)
+      call scale3(xmin,xmax,ymin,ymax,zmin,zmax)
       call trn32(0.,0.,0.,x2,y2,z2,1)
       call axproj(igetcorner())
       call ax3labels('x','y','z')
