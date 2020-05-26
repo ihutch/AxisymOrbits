@@ -7,7 +7,7 @@ module orbitpoincare
   integer, parameter :: nplot=25000     ! Max steps to store.
   integer, parameter :: nvec=6
   integer :: nwp=39,nstep=1000000       ! Default maximum steps to take.
-  real, dimension(nplot) :: r,th,z,vr,vt,vz,w,tv,pt,xplot,yplot,phip,Ep
+  real, dimension(nplot,2) :: r,th,z,vr,vt,vz,w,tv,pt,xplot,yplot,phip,Ep
   real, dimension(nbouncemax) :: wp,xi,tc
   real, dimension(nvec) :: y0,y1,y2
   data y0/10.,0.,0.,2.5,0.,0.9/ !Initial orbit conditions defaults
@@ -49,39 +49,113 @@ contains
       psiofrz=cc**4*psir
     end function psiofrz
 !***********************************************************************
+    subroutine doplots2(imax,wp0,w0,pt0)
+      integer, dimension(2) :: imax
+      integer, parameter :: nzplot=100
+      real, dimension(nzplot) :: zplot,psiplot
+      if(lp)then; call pfset(3); else; call pfset(-3);
+      endif
+
+      np=min(nwp,2)
+      call multiframe(3,1,0)
+      zmin=-10.
+      zmax=10.
+      call minmax(r(:,np),imax,rmin,rmax)
+      rmin=rmin-.3
+      rmax=rmax+.3
+      call minmax(vz(:,np)**2/2.-phip(:,np),imax(np),wmin,wmax)
+
+      call pltinit(zmin,zmax,rmin,rmax)
+      call ticnumset(4)
+      call charsize(.015,.015)
+      call axis
+      call jdrwstr(.08,wy2ny(r0+.5),'r',-1.)
+      call winset(.true.)
+      call color(4)
+      call polymark(z,r,1,1)
+      call polyline(z,r,imax)
+      call color(15)
+!      call pltend
+
+!      call autoplot(z,vz**2/2.-phip,imax)
+      call pltinit(zmin,zmax,wmin,0.02)
+      call charsize(.015,.015)
+      call axis
+      call jdrwstr(.08,wy2ny(-0.6*wpf),'W!d!A|!@!d',-1.)
+      call winset(.true.)
+      call color(4); call polyline(z,vz**2/2.-phip,imax)
+      call polymark(z,vz**2/2.-phip,1,1)
+      call color(1); call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax(2))
+      call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
+      call color(15)
+      call dashset(4)
+      call polyline([zmin,zmax],[0.,0.],2)
+      call dashset(0)
+
+      do i=1,nzplot
+         zplot(i)=zmin+(zmax-zmin)*(i-1.)/(nzplot-1)
+         psiplot(i)=-psi/cosh(zplot(i)/4.)**4
+      enddo
+      call pltinit(zmin,zmax,-psi-.1,0.1)
+      call charsize(.015,.015)
+      call axis
+      call axlabels('z','')
+      call axptset(1.,0.)
+      call ticrev; call altyaxis(Eropsi,Eropsi); call ticrev
+      call axptset(0.,0.)
+      call jdrwstr(.08,wy2ny(-.2*psi),'W!d!A|!@!d',-1.)
+      call jdrwstr(.12,wy2ny(-.2*psi),'-!Af!@',1.)
+      call jdrwstr(.96,wy2ny(-.2*psi),'-E!dr!d',-1.)
+      call winset(.true.)
+      call polyline(zplot,psiplot,nzplot)
+      call color(1); call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax(2))
+!      call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
+      call color(4); call polyline(z,vz**2/2.-phip,imax)
+!      call polymark(z,vz**2/2.-phip,1,1)
+      call color(15)
+      call pltend
+
+    end subroutine doplots2
 !***********************************************************************
     subroutine doplots(imax,wp0,w0,pt0)
-      if(lp)then; call pfset(3); else; call pfset(-3); endif
+      integer, dimension(2) :: imax
+      if(lp)then; call pfset(3); else; call pfset(-3);
+      endif
+      
+      call multiframe(3,1,0)
       call autoplot(z,r,imax)
       call axlabels('z','r')
-      call pltend
+!      call pltend
       
       call autoplot(z,vz**2/2.-phip,imax)
       call axlabels('z','v!dz!d!u2!u/2-!Af!@')
-      call pltend
-      call autoplot(tv,vz**2/2.-phip,imax)
-      call axlabels('t','v!dz!d!u2!u/2-!Af!@')
-      call pltend
-     
-      call autoplot(r,(vr**2+vt**2)/2.-phip,imax)
-      call axlabels('r','(v!dr!d!u2!u+v!d!At!@!d!u2!u)/2-!Af!@')
+!      call pltend
+
+      call autoplot(z,psi/cosh(z/4.)**4,imax)
       call pltend
 
-      call autoplot(z,vz**2/2.-psi/cosh(z/4.)**4,imax)
-      call axlabels('z','v!dz!d!u2!u/2-!Af!@(r=r0)')
-      call pltend
+      call multiframe(4,1,0)
+      call autoplot(tv,vz**2/2.-phip,imax)
+      call axlabels('t','v!dz!d!u2!u/2-!Af!@')
+!      call pltend
+
       call autoplot(tv,vz**2/2.-psi/cosh(z/4.)**4,imax)
       call axlabels('t','v!dz!d!u2!u/2-!Af!@(r=r0)')
-      call pltend
+!      call pltend
       
       call autoplot(tv,(w-w0),imax)
       call axlabels('t','Dw')
-      call pltend
-
+!      call pltend
+      
       call autoplot(tv,(pt-pt0)/pt0,imax)
       call axlabels('t','Dpt')
       call pltend
 
+      call multiframe(0,0,0)
+     
+!      call autoplot(r,(vr**2+vt**2)/2.-phip,imax)
+!      call axlabels('r','(v!dr!d!u2!u+v!d!At!@!d!u2!u)/2-!Af!@')
+!      call pltend
      
 !      call autoplot(z,Ep,imax)
 !      call axlabels('z','Ep')
@@ -193,6 +267,7 @@ subroutine orbitp
   use orbitpoincare
   character*78 string
   real :: wpt=0.
+  integer, dimension(2) :: imax
   
 ! We enter this point with w0,Bsqpsi,r,th,z set, vth=0 
   B=Bsqpsi*sqrt(psi)
@@ -230,8 +305,8 @@ subroutine orbitp
   do k=1,nwp
      t=0.
      y1=y0
-     if(nwp.le.1)then
-        wp0=-wpf*psi
+     if(nwp.le.2)then
+        wp0=-(2*k-1)*wpf*psi
      else
         wp0=-k*psi/(nwp+1.)
         wp0=-psi*(k/(nwp+1.))**alpha
@@ -241,21 +316,21 @@ subroutine orbitp
      if(lprint)write(*,'(i3,a,f8.4,a,f8.4,$)')k,' Wp0=',wp0,' vz=',y1(6)
      j=0
      do i=1,nstep
-        if(i.le.nplot)then
-           r(i) =y1(1)
-           th(i)=y1(2)
-           z(i) =y1(3)
-           xplot(i)=r(i)*cos(th(i))
-           yplot(i)=r(i)*sin(th(i))
-           vr(i)=y1(4)
-           vt(i)=y1(5)
-           vz(i)=y1(6)
-           phip(i)=psiofrz(y1(1),y1(3))
-           Ep(i)=Eropsi*phip(i)
-           w(i)=(vr(i)**2+vt(i)**2+vz(i)**2)/2.-phip(i)
-           pt(i)=r(i)*vt(i)-B*r(i)**2/2.
-           tv(i)=t
-           imax=i
+        if(i.le.nplot.and.k.le.2)then
+           r(i,k) =y1(1)
+           th(i,k)=y1(2)
+           z(i,k) =y1(3)
+           xplot(i,k)=r(i,k)*cos(th(i,k))
+           yplot(i,k)=r(i,k)*sin(th(i,k))
+           vr(i,k)=y1(4)
+           vt(i,k)=y1(5)
+           vz(i,k)=y1(6)
+           phip(i,k)=psiofrz(y1(1),y1(3))
+           Ep(i,k)=Eropsi*phip(i,k)
+           w(i,k)=(vr(i,k)**2+vt(i,k)**2+vz(i,k)**2)/2.-phip(i,k)
+           pt(i,k)=r(i,k)*vt(i,k)-B*r(i,k)**2/2.
+           tv(i,k)=t
+           imax(k)=i
         endif
         phipi=phip1
         wpi=y1(6)**2/2.-phip1 ! Parallel energy at r0
@@ -304,7 +379,7 @@ subroutine orbitp
   enddo
   call pltend
   
-  if(nwp.eq.1)call doplots(imax,wp0,w0,pt0)  
+  if(nwp.le.2)call doplots2(imax,wp0,w0,pt0)  
 
 !  583 format(i5,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3)
   73 format(a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3)
