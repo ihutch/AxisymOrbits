@@ -10,7 +10,7 @@ module trapdomain
   real, dimension(nb) :: wpbb,wpbr
   integer, dimension(nb) :: nbb
   real, dimension(nE) :: vperp(nE),vpar(nE)
-  real :: bmax=3,Ervmax=.4,vemax=2.4,psi=1.,Eropsi=.1
+  real :: bmax=3,Ervmax=.6,vemax=2.4,psi=1.,Eropsi=.1
   integer :: nres,ipfset=3,npsi=5
   character*30 :: filename
 contains
@@ -22,10 +22,15 @@ contains
     deltan=0.
     ff=1.
     do n=2,40,2
+       nby2=n/2
+!     nbp=nint((nby2-.67)*1.55)   ! Modified integer denominator power.
+       nbp=nint(nby2+max(nby2-3.3,0.)*.75) ! Alternative form. Bit better.
+       if(.false.) nbp=nby2
        swprp=swpr
        deltanp=deltan
        swpr=sqrt(((2.*bv**2/n**2)**(-0.25)+1-2.**.25)**(-4))
-       deltan=sqrt(Ervv*2./n)/sqrt(swpr*(n/2.)**ff/(1-swpr)**(n/2)+3.1415926/8.)
+!      deltan=sqrt(Ervv*2./n)/sqrt(swpr*(n/2.)**ff/(1-swpr)**(n/2)+3.1415926/8.)
+       deltan=sqrt(Ervv*2./n)/sqrt(swpr*(n/2.)/(1-swpr)**nbp+3.1415926/8.)
        if(swpr.lt.1)then
           if(swprp-deltanp.lt.swpr+deltan)then
              exit

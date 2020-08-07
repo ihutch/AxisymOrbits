@@ -1,12 +1,9 @@
 %\documentclass{agujournal2019} %dummy
-\newif\ifagu\agufalse
+\newif\ifagu%\agutrue
 %%%% Switch ifagu to true or false % And rerun bibtex if changing.
 \ifagu
 \documentclass{agujournal2019}
   \usepackage{url}
-%  \setkeys{Gin}{draft=false} % Make figures included in place.
-% Comment the \linenumbers, not the lineno. But there may be other
-% problems that might require us to define dummy linenomath environment.
   \usepackage[]{lineno} \linenumbers*[1] 
   \usepackage[inline]{trackchanges}
   \usepackage{soul}
@@ -52,9 +49,13 @@
 \usepackage{graphicx}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{tikz}
+\usetikzlibrary{external}
+% Externalizing figures should probably be disabled when not generating.
+\newif\ifextgen%\extgentrue
+\ifextgen\tikzexternalize\fi % activate!
 % Personal Macros.   For brevity.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newif\ifremnants
 \def\wp{w_\parallel}
 \def\wr{w_{\parallel R}}
 \def\swp{\sqrt{w_\parallel}}
@@ -105,7 +106,6 @@ plasmas.
   hole by depression of the permanently trapped distribution function.
 \end{abstract}
 
-%\ifagu\begin{article}\fi
 \section{Background}
 
 Electron holes are steady solitary electrostatic positive potential
@@ -153,11 +153,15 @@ analysed and calculated numerically, to discover which regions of
 phase space are permanently trapped; and, in contrast, the regions
 that initially possess small enough parallel kinetic energy to be
 trapped by the parallel electric field, but evolve soon to become
-untrapped, by the transfer of energy from perpendicular
-gyration. These detrapped orbits (or strictly the time-reversed orbits
-to which they correspond) cannot sustain depressed electron
-phase-space density, and so cannot contribute to the maintaining the
-hole's positive potential.
+untrapped, by the transfer of energy from perpendicular gyration. By
+time reversal symmetry, equivalent orbits (in equal numbers)
+experience evolution of parallel energy from passing to become
+trapped. There thus arises a large effective parallel energy diffusion
+across the trapped/passing boundary. These detrapping/trapping orbits
+cannot sustain depressed electron phase-space density, and so cannot
+contribute to maintaining the hole's positive potential, because
+the important detrapping occurs usually on a short timescale of a
+moderate number of bounces, i.e. approximately of plasma periods.
 
 The present work does not solve the (still unsolved) full problem of
 finding a self-consistent equilibrium in which only the velocity
@@ -197,10 +201,17 @@ localize the orbit in radial position, within approximately one
 gyro-radius. Fig.\ \ref{fig:orbitview} illustrates the kind of orbit
 that results.
 \begin{figure}
-  \centering
-  \ (a)\hskip-2em\includegraphics[width=0.43\hsize]{orbitxy}
-  \ (b)\hskip-2em\includegraphics[width=0.56\hsize]{orbitxyz}
-  \caption{Example of a trapped electron orbit in a model electron-hole
+\ifextgen
+  \tikzsetnextfilename{Figure1}
+    \centering
+  \begin{tikzpicture}\node (image)
+    {\ (a)\hskip-2em\includegraphics[width=0.43\hsize]{orbitxy}
+    \ (b)\hskip-2em\includegraphics[width=0.56\hsize]{orbitxyz}}
+  ;\end{tikzpicture}
+\else
+\includegraphics[width=\hsize]{Figure1}
+\fi
+\caption{Example of a trapped electron orbit in a model electron-hole
     potential $\phi=\psi\exp([r_0-r]/L_\perp)\,{\rm
       sech}^4(z/4)$, starting at $x=r_0,\ y=0,\ z=0,\ v_x=1,\ v_y=0,\ v_z=1$.
     Viewed (a) in the transverse $x,y$ plane, and (b) in three-dimensions
@@ -210,18 +221,18 @@ that results.
   \label{fig:orbitview}
 \end{figure}
 
-For an electron hole to sustain itself requires a substantial
-fraction of the particle orbits to be trapped. These orbits can then
+For an electron hole to sustain itself requires a substantial fraction
+of the particle orbits to be trapped. These orbits can then
 permanently possess a phase-space density ($f$) less than those of
 untrapped orbits. Because in a collisionless plasma $f$ is constant
 along orbits, the \emph{untrapped} orbits have phase-space density
 corresponding to their distribution function at infinity; whereas the
-permanently \emph{trapped} orbits have $f$ determined by initial conditions:
-the hole formation processes etc. The key question concerning the
-existence of a steady solitary electron hole equilibrium is whether
-there are enough trapped orbits to provide a negative electron density
-perturbation that can sustain the potential structure
-self-consistently.
+permanently \emph{trapped} orbits have $f$ determined by initial
+conditions: the hole formation processes etc. The key question
+concerning the existence of a steady solitary electron hole
+equilibrium is whether there are enough permanently trapped orbits to
+provide a negative electron density perturbation that can sustain the
+potential structure self-consistently.
 
 Isotropic multidimensional electron hole equilibria do not exist
 because the trapped phase space is then only orbits which have $W<0$,
@@ -230,7 +241,7 @@ when $d>1$ \citep{Krasovsky2004,Ng2005,Ng2006}.  Particle in cell
 simulation and drift-orbit analysis show that there exist axisymmetric
 2D equilibria, with anisotropic $f(\bm{v})$, when the magnetic field is strong
 enough that the gyro-radius ($\rho$) is negligibly small. Essentially
-this existence arises because of the orbit invariance of $W_\perp$ and
+this existence arises because of the adiabatic invariance of $W_\perp$ and
 hence $W_\parallel=W-W_\perp$ in the limit of small $\rho$. The
 trapped phase-space volume is then larger ($\propto \phi^{1/2}$), requiring only
 $W_\parallel <0$ and extending to large positive $W_\perp$.  For the
@@ -242,7 +253,7 @@ what extent the amount exchanged is limited, and an orbit remains
 trapped in the $z$-direction ($W_\parallel<0$) even if it has so large
 a $W_\perp$ that $W>0$? An earlier attempt on this problem used a more
 complicated treatment based on an ``approximate invariant''
-\citep{Krasovsky2006} but was not carried through to a comprehensive
+\citep{Krasovsky2006} but was not carried through to a full
 result. The present paper overcomes the challenge.
 
 Although the calculation will remain as general as possible, we shall
@@ -327,7 +338,7 @@ function of parallel position.
 The top frame shows the track $(r(t),z(t))$ in the $r$-$z$ plane combining
 gyro-motion and parallel reflections (the blue orbit is omitted in
 this frame for clarity, but has the same radial excursion). The middle and
-bottom frame show instead the parallel energy $W_\parallel(z,t)$ and the
+bottom frames show instead the parallel energy $W_\parallel(z,t)$ and the
 bottom shows $-\phi(z)$ and (read on the right scale) $E_r(z)$. The
 detrapped orbit has two $z$-reflections before acquiring
 $W_\parallel>0$ at the right-hand hole extremity and leaving the hole,
@@ -536,7 +547,8 @@ $\psi$, and (for future use) cyclotron frequency to $\sqrt\psi$ as
 so trapped orbits have
 $\wp$ running from 0 to 1, and the orbits that can become untrapped
 have $w>0$. For a given magnetic field value
-$b$, and harmonic number $n$, the resonance condition is $n\omega_b=b$,
+$b$, and harmonic number $n$, the resonance condition is
+$n\omega_b/\sqrt{\psi}=b$,
 which gives a resonant parallel energy 
 \begin{equation}
   \label{eq:resen}
@@ -664,29 +676,39 @@ $(1-\sqrt{\wp})^{n/2}$. Consider then the following proposed interpolation
 between the two limits of $\wp$:
 \begin{equation}
   \label{eq:Enint}
-  E_n= E_{r0} \left[ {n/2\over(1-\sqrt{\wp})^{n/2}} + {\pi\over8}{1\over\sqrt{\wp}}\right]^{-1}.
+  E_n= E_{r0} \left[ {n/2\over(1-\sqrt{\wp})^m} + {\pi\over8}{1\over\sqrt{\wp}}\right]^{-1},
 \end{equation}
+where for most purposes $m=n/2$.
 The first term predominates as $\wp\to1$, and the second as
 $\wp\to0$. In their respective limits, these two terms give
 the correct values for $E_2$, in agreement with eqs.\
 \ref{eq:fouriermodes} and \ref{eq:E2}. In the $\wp\to1$ limit,
 the higher harmonics have appropriate scaling with
 $1-\sqrt{\wp}$. Their numerator $n/2$ has not been
-derived; nor has the inverse form of the
+derived; and, more crucially, neither has the inverse form of the
 interpolation. Nevertheless, a comparison between this expression and
-numerical calculation of the Fourier harmonics, shows remarkably good
+numerical calculation of the Fourier harmonics, shows quite good
 agreement, as can be seen in Fig.\ \ref{fig:Enint}.
 \begin{figure}%[htp]
   \centering
-  \includegraphics[width=0.6\hsize]{EnvW}
+  \includegraphics[width=0.5\hsize]{EnvW2}
   \caption{Comparison between numerically integrated Fourier
     coefficients for a ${\rm sech}^4(z/4)$ potential variation (solid
-    lines) and the interpolation eq.\ (\ref{eq:Enint}) (dashed lines),
+    lines) and the interpolation eq.\ (\ref{eq:Enint}) with $m=n/2$
+    (dotted) or using eq.\ (\ref{eq:adhocadj})  (dashed lines),
     for different harmonic number (line labels).}
   \label{fig:Enint}
 \end{figure}
-This is sufficient for the purposes of a
-representative potential profile calculation.
+This agreement is sufficient for many purposes, but some moderate
+discrepancies remain especially at high $n$. They are significantly
+reduced if an ad hoc adjustment is made by substituting
+\begin{equation}
+  \label{eq:adhocadj}
+  m=\mathtt{nint}(n/2+\mathtt{max}(n/2-3.3,0)*0.75)  
+\end{equation}
+(instead of
+$m=n/2$) into eq.\ (\ref{eq:Enint}). The adjustment benefits from
+retaining convenient integrability.
 
 \section{Solving the $\wp$ trajectories}
 
@@ -709,7 +731,7 @@ eq. (\ref{eq:Enint}), and $v_\perp=\sqrt{2(w+\wp)\psi}$, it can be written
 \begin{align}
   \label{eq:combtraj1}
   n{\sqrt{\wp}-\sqrt{\wr }\over\sqrt{2} \sqrt{w+\wp}}
-   \left[{n/2\over (1-\sqrt{\wp})^{n/2}} + 
+   \left[{n/2\over (1-\sqrt{\wp})^m} + 
      {\pi\over8}{1\over\sqrt{\wp}}\right]
    {d\wp \over d\xi}\nonumber\\
   =(E_{r0}/\psi) \cos\xi.
@@ -745,10 +767,17 @@ resonant energy. If the magnetic field strength is big enough that
 $\Omega^2/\psi >1$, then this $n=2$ resonance does not exist.
 
 Fig.\ \ref{fig:traj905}(a), instead shows trajectories for fixed
-\begin{figure}%[htp]
-  \noindent
+\begin{figure}
+\ifextgen
+  \tikzsetnextfilename{Figure6}
+    \begin{tikzpicture}\node (image)
+  {\noindent
   \includegraphics[width=0.491\hsize]{phas905}\hskip-2em (a)\hskip1em 
-  \includegraphics[width=0.488\hsize]{poin905}\hskip-2em (b)
+  \includegraphics[width=0.488\hsize]{poin905}\hskip-2em (b)\phantom{M}}
+;\end{tikzpicture}
+\else
+\includegraphics[width=\hsize]{Figure6}
+\fi
   \caption{(a) Example analytic energy trajectories for different harmonics
     ($n$), and fixed magnetic field strength. (b) Poincar\'e plot of
     the corresponding numerically integrated orbit.}
@@ -782,12 +811,13 @@ examples of orbits so calculated.
 
 Poincar\'e plots of the energy trajectories for such orbits are
 obtained by collecting values of $W_\parallel$ and the phase of $v_r$
-(i.e.\ \verb!atan2!$(v_\theta,v_r)$) at successive instants when the orbit passes through $z=0$ (at which
-the orbit phase is zero or $\pi$ and the phase of $E_n$ is zero for
-all even $n$). The phase difference, $\xi$, thus equals the phase of
-$v_r$. We place a point at each of the corresponding positions in
-$\xi,W_\parallel$ space. We also, for convenience, start all orbits at
-$z=0$ and with $v_\theta=0$, $v_r$ positive: $\xi=0$. We abandon as escaped any
+(i.e.\ \verb!atan2!$(v_\theta,v_r)$) at successive instants when the
+orbit passes through $z=0$ (at which the orbit bounce phase is zero or
+$\pi$ and the phase of $E_n$ is zero for all even $n$). The phase
+difference, $\xi$, thus equals the phase of $v_r$. We place a point at
+each of the corresponding positions in $\xi,W_\parallel$ space. We
+also, for convenience, start all orbits at $z=0$ and with
+$v_\theta=0$, $v_r$ positive: $\xi=0$. We abandon as escaped any
 orbits that acquire positive $W_\parallel$ or pass beyond $|z|=20$.  A
 technical subtlety is that it is most appropriate to use for
 $W_\parallel=v_z^2/2-\phi$, not the value of $\phi$ at the orbit, but
@@ -811,10 +841,17 @@ rather incoherent scatter of the points. Orbits above this energy are
 stochastic, and terminate after some tens of bounces by leaving the
 domain. Again, this agrees well with the analytic observation of
 overlap between $n=6$ and $8$, but not between $n=4$ and $6$ islands.
-\begin{figure}%[htp]
-  \noindent
+\begin{figure}
+\ifextgen
+  \tikzsetnextfilename{Figure7}
+      \begin{tikzpicture}\node (image)
+  {\noindent
   \includegraphics[width=0.491\hsize]{phas940}\hskip-2em (a)\hskip1em 
-  \includegraphics[width=0.488\hsize]{poin940}\hskip-2em (b)
+  \includegraphics[width=0.488\hsize]{poin940}\hskip-2em (b)\phantom{M}}
+  ;\end{tikzpicture}
+\else
+\includegraphics[width=\hsize]{Figure7}
+\fi
   \caption{(a) Analytic energy trajectories for different harmonics
     ($n$), and fixed magnetic field strength and (b) Poincar\'e plot of
     the corresponding numerically integrated orbit, for a stronger
@@ -835,10 +872,17 @@ nonlinearity, and are not represented in the analytic linearized
 approximation. Still, the overall extent of the $n=2$ island is quite
 well captured by the analytics, which predict that it should remain
 intact, as it does.
-\begin{figure}%[htp]
-  \noindent
+\begin{figure}
+\ifextgen
+  \tikzsetnextfilename{Figure8}
+  \begin{tikzpicture}\node (image)
+  {\noindent
   \includegraphics[width=0.491\hsize]{phas9100}\hskip-2em (a)\hskip1em 
-  \includegraphics[width=0.488\hsize]{poin9100}\hskip-2em (b)
+  \includegraphics[width=0.488\hsize]{poin9100}\hskip-2em (b)\phantom{M}}
+  ;\end{tikzpicture}
+\else
+\includegraphics[width=\hsize]{Figure8}
+\fi
   \caption{(a) Analytic energy trajectories for different harmonics
     ($n$), and fixed magnetic field strength and (b) Poincar\'e plot of
     the corresponding numerically integrated orbit, for an extremely strong
@@ -851,12 +895,19 @@ illustrated by Fig.\ \ref{fig:traj9100}. Soon beyond it, by $E_r/\psi=0.13$,
 essentially the whole of the phase space becomes stochastic.
 
 \begin{figure}
-  \noindent
+\ifextgen
+  \tikzsetnextfilename{Figure9}
+  \begin{tikzpicture}\node[anchor=south west] (image) 
+  {\noindent
   \includegraphics[width=0.491\hsize]{phas610}\hskip-2em (a)\hskip1em 
-  \includegraphics[width=0.488\hsize]{poin610}\hskip-2em (b)
-\par\noindent 
-  \includegraphics[width=0.491\hsize]{phas640}\hskip-2em (c)\hskip1em 
-  \includegraphics[width=0.488\hsize]{poin640}\hskip-2em (d)
+  \includegraphics[width=0.488\hsize]{poin610}\hskip-2em (b)\phantom{M}};
+ \node[anchor=north west] (image)
+  {\includegraphics[width=0.491\hsize]{phas640}\hskip-2em (c)\hskip1em 
+  \includegraphics[width=0.488\hsize]{poin640}\hskip-2em (d)\phantom{M}}
+  ;\end{tikzpicture}
+\else
+\includegraphics[width=\hsize]{Figure9}
+\fi
   \caption{(a),(c) Analytic energy trajectories fixed magnetic field
     strength and (b),(d) Poincar\'e plots of the corresponding
     numerically integrated orbits, for a lower magnetic field, and two
@@ -865,20 +916,27 @@ essentially the whole of the phase space becomes stochastic.
 \end{figure}
 Fig.\ \ref{fig:traj6100} shows what happens for a lower magnetic
 field, $\Omega/\sqrt{\psi}=0.6$. In this case, a field $E_r/\psi=0.04$
-is sufficient make the $n=2$ island stochastic, but when that happens,
+is sufficient to make the $n=2$ island stochastic, but when that happens,
 there still remain some permanently trapped orbits at energies
 sufficiently below the resonance value ($\sim0.6^2$).
 
 In contrast, as shown in Fig.\ \ref{fig:traj1840},
-\begin{figure}%[htp]
-  \noindent
+\begin{figure}
+\ifextgen
+  \tikzsetnextfilename{Figure10}
+  \begin{tikzpicture}\node[anchor=south west] (image) 
+  {\noindent
   \includegraphics[width=0.491\hsize]{phas1840}\hskip-2em (a)\hskip1em 
-  \includegraphics[width=0.488\hsize]{poin1840}\hskip-2em (b)
-\par\noindent
-  \includegraphics[width=0.491\hsize]{phas18200}\hskip-2em (a)\hskip1em 
-  \includegraphics[width=0.488\hsize]{poin18200}\hskip-2em (b)
+  \includegraphics[width=0.488\hsize]{poin1840}\hskip-2em (b)};
+  \node[anchor=north west] (image)
+  {\includegraphics[width=0.491\hsize]{phas18200}\hskip-2em (a)\hskip1em 
+   \includegraphics[width=0.488\hsize]{poin18200}\hskip-2em (b)\phantom{M}}
+  ;\end{tikzpicture}  
+\else
+\includegraphics[width=\hsize]{Figure10}
+\fi
   \caption{Analytic energy trajectories (a,c), and corresponding
-    Poincar\'e plots (b,d), for $\Omega/\sqrt{\psi}=1/8$, and
+    Poincar\'e plots (b,d), for $\Omega/\sqrt{\psi}=1.8$, and
     $E_r/\psi=0.04$ (a,b) or 0.2 (c,d).}
   \label{fig:traj1840}
 \end{figure}
@@ -913,7 +971,7 @@ derivative in the vicinity of the resonance can be taken from eq.\
   &= 2\sqrt{\wp}{\partial F_n\over \partial \wp}\\
   &=
    {n(\sqrt{\wp}-\sqrt{\wr })\over\sqrt{2} \sqrt{w+\wp}}
-   \left[{\sqrt{\wp}\,n/2\over (1-\sqrt{\wp})^{n/2}} + 
+   \left[{\sqrt{\wp}\,n/2\over (1-\sqrt{\wp})^m} + 
      {\pi\over8}\right].\nonumber
 \end{align}
 Consequently the width of the island
@@ -933,7 +991,7 @@ second-order term in a Taylor expansion of $F_n$) we can express the island
 &\simeq
 \left[  {E_{r0}\over
     \psi}{2\sqrt{2}\over n}{\sqrt{w+\wr }}\right]^{1/2}
- \left[{\sqrt{\wr }\,n/2\over (1-\sqrt{\wr })^{n/2}} + 
+ \left[{\sqrt{\wr }\,n/2\over (1-\sqrt{\wr })^m} + 
      {\pi\over8}\right]^{-1/2}.\nonumber
 \end{align}
 We write $w+\wr =w_\perp$
@@ -941,7 +999,8 @@ We write $w+\wr =w_\perp$
 parameters $n$, $E_{ro}v_\perp/\psi^{3/2}$, and $\wr$ determine
 $\delta_n$ as follows.
 
-\paragraph{Analytic Algorithm}
+\noindent
+\textbf{Analytic Algorithm\quad}
 Eq.\ (\ref{eq:resen}) $\wrn=[(n^2/2b^2)^{1/4}+1-2^{1/4} ]^{-4}$
 enables us to find the energy of the upper and lower island limits of
 island $n$ as
@@ -950,10 +1009,12 @@ island $n$ as
   &\sqrt{\wrn}\pm\delta_n= \\
 &\sqrt{\wrn} \pm\left[  {E_{r0}v_\perp\over
     \psi\sqrt{\psi}}{2\over n}\right]^{1/2}
- \left[{\sqrt{\wrn }\,n/2\over (1-\sqrt{\wrn })^{n/2}} + 
+ \left[{\sqrt{\wrn }\,n/2\over (1-\sqrt{\wrn })^m} + 
      {\pi\over8}\right]^{-1/2}.\nonumber 
 \end{align}
-Overlap occurs between the $n$ and $n+2$ harmonic islands when
+It is in this equation that one must use the adjustment of $m$ of eq.\
+(\ref{eq:adhocadj}) for high harmonics. Overlap occurs between the $n$
+and $n+2$ harmonic islands when
 $\sqrt{w_{\parallel R n}}-\delta_n<\sqrt{w_{\parallel R
     n+2}}+\delta_{n+2}$.
 Beginning at the lowest value of $n$ for which a resonance exists
@@ -971,10 +1032,17 @@ Energies below this approximate bound are predicted trapped, energies
 above have stochastic orbits and are detrapped.
 
 Figure \ref{fig:trapdomain}(a) shows the universal contours that result.
-\begin{figure}%[htp]
-  \noindent
+\begin{figure}
+\ifextgen
+  \tikzsetnextfilename{Figure11}
+  \begin{tikzpicture}\node (image)
+  {\noindent
   \includegraphics[width=0.52\hsize]{trapdomain}\hskip-2em(a)\hskip1em
-  \includegraphics[width=0.46\hsize]{tdlineouts}\hskip-2em(b)
+  \includegraphics[width=0.46\hsize]{tdlineouts}\hskip-2em(b)\phantom{M}}
+  ;\end{tikzpicture}
+\else
+\includegraphics[width=\hsize]{Figure11}
+\fi
   \caption{(a) Contours of the energy boundary $W_{\parallel t}$
     between trapped and detrapped orbits as a function of perturbation
     strength $E_{r0}v_\perp/\psi^{3/2}$ and magnetic field
@@ -1001,32 +1069,16 @@ $W_{\parallel t}$ as a function of $b$. These lines are each
 accompanied by points, each of which comes from full numerical orbit
 integration. A point gives the lowest starting energy that escapes
 during the first 200 bounces (which might take as many as a million
-time-steps). We observe that there is rather good agreement (even in
-respect of the discontinuities) at moderate magnetic field
-$\Omega/\sqrt{\psi}\lesssim 2$ between the points and the lines. At
-higher field, the overlap criterion is pessimistic compared with orbit
-following, predicting somewhat more detrapping than is observed.  This
-discrepancy may arise in part from the approximations implicit in
-equations (\ref{eq:Enint}) and (\ref{eq:halfwidth}). But it might also
-reflect limitations in the criterion for detection of orbit loss
-because of using fixed initial phase $\xi=0$, or because of limited
-orbit integration length.  It is known theoretically \citep{Meiss1992}
-that there can sometimes be extremely slow trajectory diffusion
-coefficients even in stochastic regions. This warns us that it is an
-over-simplification to suppose that stochastic orbits can have
-negligible depression of phase-space density $f(v)$ from the
-marginally untrapped value. In any case, agreement in the loss
-boundary deduced from analytic and numerical treatments is within 0.1
-in $W_{\parallel t}/\psi$.
+time-steps). We observe that there is very good agreement (even in
+respect of the discontinuities) between the points and the lines. 
 
-A more approximate form of the island widths can be obtained by 
-substituting the more approximate frequency fit 
-$\wr =4\Omega^2/n^2\psi=4b^2/n^2$, and
-approximating $(1-\sqrt{\wr })^{n/2}
-=(1-2b/n)^{n/2}\simeq
-{\rm e}^{-b}$. Then we find $\delta_n$ is
-approximately proportional to $1/\sqrt{n}$ and can be
-written
+A more approximate form of the island widths can be obtained by using
+$m=n/2$, substituting the more approximate frequency fit
+$\wr =4\Omega^2/n^2\psi=4b^2/n^2$ so that
+$\sqrt{w_{Rn}}-\sqrt{w_{Rn+2}}\simeq 4b/n^2$, and approximating
+$(1-\sqrt{\wr })^{n/2} =(1-2b/n)^{n/2}\simeq {\rm e}^{-b}$. Then we
+find $\delta_n$ is approximately proportional to $1/\sqrt{n}$ and can
+be written
 \begin{equation}
   \label{eq:halfomega}
  \delta_n\simeq\left[  {E_{r0}\over
@@ -1037,10 +1089,12 @@ b{\rm e}^b
      +{\pi\over8}\right]^{-1/2}
 \end{equation}
 With reference to this approximation, the behavior can readily be
-understood as follows. Island overlap leading to stochastic
-trajectories occurs if $\delta_n$ is too large; that is if $E_{r0}v_\perp$ is too
-large, or $b$ $(=\Omega/\sqrt\psi)$ is too small, or $n$ is too
-large. The last of these cases (high $n$
+understood as follows. Island overlap
+($2\delta_n\gtrsim \sqrt{w_{Rn}}-\sqrt{w_{Rn+2}}$) leading to
+stochastic trajectories occurs if $\delta_n$ is too large, that is if
+$E_{r0}v_\perp/\psi$ is too large provided $b$ $(=\Omega/\sqrt\psi)$ is not
+large; or else if $n$ is too large, making
+$\sqrt{w_{Rn}}-\sqrt{w_{Rn+2}}$ too small. The last of these cases (high $n$
 at modest $E_{r0}$ and $b$) predicts that there is in principle
 \emph{always} a stochastic region at very small $\wp$, where the
 bounce frequency is correspondingly small and the resonant bounce
@@ -1049,9 +1103,7 @@ values. Consequently, a steady electron hole of limited transverse
 extent will always have a stochastic transition between trapped and
 passing orbits that in practice smooths out any steep $f$-gradients at
 the separatrix. Our numerical orbit integration confirms this
-prediction (at the computing cost of very long integrations and fine
-energy resolution) but not with particularly accurate
-agreement on $W_{\parallel t}$, as already mentioned.
+prediction.
 
 When $b$ ($=\Omega/\sqrt\psi$) is large, the term ${\rm e}^b$ makes
 $\delta_n$ small, regardless of $E_{r0}$, and suppresses overlap. This
@@ -1084,10 +1136,17 @@ points.
 
 A perhaps more intuitive way to portray typical results is as in Fig.\
 \ref{fig:vspace},
-\begin{figure}%[htp]
-  \noindent
+\begin{figure}
+\ifextgen
+  \tikzsetnextfilename{Figure12}
+  \begin{tikzpicture}\node (image)
+  {\noindent
   \includegraphics[width=0.48\hsize]{vspace05}\hskip-2em (a)\hskip1em
-  \includegraphics[width=0.48\hsize]{vspace12}\hskip-2em (b)
+  \includegraphics[width=0.48\hsize]{vspace12}\hskip-2em (b)\phantom{M}}
+  ;\end{tikzpicture}
+\else
+\includegraphics[width=\hsize]{Figure12}
+\fi
   \caption{The boundary in velocity-space measured at $z=0$ between
     trapped and untrapped orbits at different $\psi$-values: (a) for
     low magnetic field $\Omega=0.5$, (b) for higher $\Omega=1.2$. }
@@ -1157,15 +1216,15 @@ be.
 The integrated expressions for $F_n$ are as follows
 \begin{align}
   \label{eq:integrals}
-  F_n&={n^2\over 2\sqrt{2}}g_n+{n\pi\over16\sqrt2} g_0,\\
+  F_n&={n^2\over 2\sqrt{2}}g_m+{n\pi\over16\sqrt2} g_0,\\
 \noalign{with}
   g_0&=\int {(\sqrt{\wp}-\sqrt{\wr })d\wp
        \over\sqrt{w+\wp}\sqrt{\wp}}; \qquad \\
-  g_n&=\int  {(\sqrt{\wp}-\sqrt{\wr })d\wp
-       \over\sqrt{w+\wp}(1-\sqrt{\wp})^{n/2}}.
+  g_m&=\int  {(\sqrt{\wp}-\sqrt{\wr })d\wp
+       \over\sqrt{w+\wp}(1-\sqrt{\wp})^m}.
 \end{align}
 The first function is easy: $g_0=2[\sqrt{w+\wp}-w\swr\ln(\sqrt{w+\wp}+\swp)]$.
-To evaluate $g_n$, define the integrals
+To evaluate $g_m$, define the integrals
 \begin{align}
   \label{eq:integrals2}
   I_m(a,x)=\int {dx\over \sqrt{a+x^2}(1-x)^m},\\ 
@@ -1174,7 +1233,7 @@ To evaluate $g_n$, define the integrals
 then, since $x^2=(x-1)x+x$, it is easy to show that
 \begin{equation}
   \label{eq:gnfromj}
-   g_n=2[(1-\swr)J_{n/2}(w,\swp)-J_{n/2-1}(w,\swp)].
+   g_m=2[(1-\swr)J_m(w,\swp)-J_{m-1}(w,\swp)].
 \end{equation}
 The $J_m$ and $I_m$ are related by 
 \begin{equation}
@@ -1202,7 +1261,7 @@ $I_0=\ln(\sqrt{a+x^2}+x)$, and
 $I_1=[\ln(\sqrt{a+1}\sqrt{a+x^2}+a+x)-\ln(1-x)]/\sqrt{a+x^2}$ we can
 efficiently obtain by iteration $I_m$ and $J_m$ for $m$ as high as required.
 This iterative scheme has been implemented and verified, and is used
-to give the island plots in this paper.
+to give the island plots in this paper, which use simply $m=n/2$.
 
 \section*{Acknowledgements}
 I am grateful for useful discussions about transverse structure of
@@ -1215,7 +1274,6 @@ partially funded by NASA grant NNX16AG82G.
 
 \bibliography{MyAll}
 
-\ifremnants\input remnants.tex\fi
 
 \end{document}
 
@@ -1223,11 +1281,6 @@ partially funded by NASA grant NNX16AG82G.
 %%% mode: latex
 %%% TeX-master: t
 %%% End:
+% 9060 words from start of section 1 
+% including 36 equations of length maybe 35 words ~1000 words.
 
-
-https://zenodo.org/record/3746740
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: t
-%%% End:
