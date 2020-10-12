@@ -7,7 +7,7 @@ include ACCIS.mk
 #########################################################################
 LIBRARIES := $(LIBRARIES)
 LIBDEPS := $(LIBDEPS)
-COMPILE-SWITCHES:=$(COMPILE-SWITCHES) -Wno-unused-dummy-argument
+COMPILE-SWITCHES:=$(COMPILE-SWITCHES) -Wno-unused-dummy-argument -fbounds-check
 #########################################################################
 OBJECTS=acpath.o
 #########################################################################

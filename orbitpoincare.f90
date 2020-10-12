@@ -1,16 +1,22 @@
   ! Integrate orbits in a specified potential to generate a poicare plot
 module orbitpoincare
-  real :: Bsqpsi=.85, Eropsi=.01, psi=1. 
-  real :: r0,wpf=0.5,B,w0=1.,alpha=1.
-  logical :: lp=.true.,lprint=.true.
+  real :: Bsqpsi=.85, Eropsi=.01, psi=1., Omega=0.
+  real :: r0,wpf=0.5,B,w0=1.,alpha=1.,wpt
+  real :: wpm=0.,psim=0.5   ! Minimum confined energy, for psimax
+  integer, parameter :: npmmax=100
+  real, dimension(npmmax) :: psiplot,omegaplot
+  integer :: nerp=1,npm=npmmax   ! n Eropsi's, psi divisions of psimax
+  logical :: lp=.true.,lprint=.true.,lo=.true.
   integer, parameter :: nbouncemax=200  ! Max bounces to store.
   integer, parameter :: nplot=25000     ! Max steps to store.
   integer, parameter :: nvec=6
+  integer :: iwritetype=0,idoplots=2
   integer :: nwp=39,nstep=1000000       ! Default maximum steps to take.
   real, dimension(nplot,2) :: r,th,z,vr,vt,vz,w,tv,pt,xplot,yplot,phip,Ep
   real, dimension(nbouncemax) :: wp,xi,tc
   real, dimension(nvec) :: y0,y1,y2
-  data y0/10.,0.,0.,2.5,0.,0.9/ !Initial orbit conditions defaults
+  real ::  vangle0=0.          ! Angle of initial v to r-direction degrees.
+  data y0/10.,0.,0.,0.,0.,0./ !Initial orbit (position) defaults
 contains
 !***********************************************************************
    subroutine RKFUN(yp,y,t,icase,ierr)
@@ -85,7 +91,9 @@ contains
       call winset(.true.)
       call color(4); call polyline(z,vz**2/2.-phip,imax)
       call polymark(z,vz**2/2.-phip,1,1)
-      call color(1); call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax(2))
+      call color(1);
+!      write(*,*)'imax=',imax
+      call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax)
       call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
       call color(15)
       call dashset(4)
@@ -108,7 +116,8 @@ contains
       call jdrwstr(.96,wy2ny(-.2*psi),'-E!dr!d',-1.)
       call winset(.true.)
       call polyline(zplot,psiplot,nzplot)
-      call color(1); call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax(2))
+      call color(1);
+      call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax)
 !      call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
       call color(4); call polyline(z,vz**2/2.-phip,imax)
 !      call polymark(z,vz**2/2.-phip,1,1)
@@ -266,55 +275,70 @@ end module orbitpoincare
 subroutine orbitp
   use orbitpoincare
   character*78 string
-  real :: wpt=0.
   integer, dimension(2) :: imax
-  
+
+  wpt=0.
 ! We enter this point with w0,Bsqpsi,r,th,z set, vth=0 
   B=Bsqpsi*sqrt(psi)
   dt=0.047/B
-  pt0=y0(1)*y0(5)-B*y0(1)**2/2.
-  r0=y0(1)
-! Set vr and vz consistent with Wp=-psi/2.
-  phip1=psiofrz(y0(1),y0(3))
-  y0(6)=sqrt(phip1)  ! Make wp=vz^2/2-phi equal to -phi/2
-  y0(4)=sqrt(2.*(phip1+w0)-y0(6)**2) ! Give vr the rest of energy.
-! These velocities are changed in the energy scans below.  
-!  w0=(y0(4)**2+y0(5)**2+y0(6)**2)/2.-phip1 ! The unnormalized W (not w)
- 
+!  dt=.01/B
   if(lprint)write(*,73)'w0=',w0,' Eropsi=',Eropsi,' Bsqpsi=',Bsqpsi,&
-       ' psi=',psi,' r0=',r0, ' rho0=', y0(4)/B
+       ' psi=',psi,' r0=',y0(1) !,' rho0=', y0(4)/B
 
-! Thermal rho=1/B.  
-  write(string,'(a,f4.2,a,f5.3,a,f4.2,a,f4.2,a,f4.2,a)') &
-       'W=',w0,' E!dr!d/!Ay!@=',Eropsi &
-       ,' !AW!@/!A)y!@=',Bsqpsi,' !Ar!@/r!d0!d=',1./(B*r0) &
-       ,' !Ay!@=',psi
+  if(idoplots.ne.0)then
   if(lp)then
-     call pfset(3)
+     call pfset(3)    ! Display and output plots
   else
-     call pfset(-3)
+     call pfset(-3)   ! Run continuously outputing plots
   endif
   call pltinit(-.99999,1.,-1.,0.)
   call charsize(.018,.018)
+! Thermal rho=1/B.  
+     write(string,'(a,f4.2,a,f5.3,a,f4.2,a,f4.2,a,f4.2,a)') &
+       'W=',w0,' E!dr!d/!Ay!@=',Eropsi &
+       ,' !AW!@/!A)y!@=',Bsqpsi,' !Ar!@/r!d0!d=',1./(B*y0(1)) &
+       ,' !Ay!@=',psi
   call boxtitle(string)
   call axis
   call axis2
   call axlabels('!Ac!@/!Ap!@','W!d!A|!@!d/!Ay!@')
+endif
 
-  
   do k=1,nwp
      t=0.
-     y1=y0
      if(nwp.le.2)then
         wp0=-(2*k-1)*wpf*psi
      else
         wp0=-k*psi/(nwp+1.)
         wp0=-psi*(k/(nwp+1.))**alpha
      endif
+! Initial position (zero velocity)
+     y1=y0
+! Initial r/theta velocities
+     vmod0=sqrt(2.*(w0-wp0))
+     y1(4)=cos(vangle0*3.1415926/180.)*vmod0
+     y1(5)=sin(vangle0*3.1415926/180.)*vmod0
+     pt0=y1(1)*y1(5)-B*y1(1)**2/2.
+! The following is assuming y0(5)=0. which is not necessarily true
+! It needs to be the gyrocenter.
+!  r0=y0(1)
+! Instead we better approximate it as the place where y0(5) is zero
+! although that is not perfect
+     r0=sqrt(-2.*pt0/B)
+     if(lprint.and.k.eq.nwp)write(*,*)'rc0=',r0
+     phip1=psiofrz(r0,y0(3))
      y1(6)=sqrt(2.*(wp0+phip1))
-     y1(4)=sqrt(2.*(w0-wp0))
+! Obsolete:
+! Set vr and vz consistent with Wp=-psi/2.
+!     phip1=psiofrz(y0(1),y0(3))
+!     y0(6)=sqrt(phip1)  ! Make wp=vz^2/2-phi equal to -phi/2
+!     y0(4)=sqrt(2.*(phip1+w0)-y0(6)**2) ! Give vr the rest of energy.
+! These velocities are changed in the energy scans below.  
+!  w0=(y0(4)**2+y0(5)**2+y0(6)**2)/2.-phip1 ! The unnormalized W (not w)
+
      if(lprint)write(*,'(i3,a,f8.4,a,f8.4,$)')k,' Wp0=',wp0,' vz=',y1(6)
      j=0
+     wpp=wp0
      do i=1,nstep
         if(i.le.nplot.and.k.le.2)then
            r(i,k) =y1(1)
@@ -332,22 +356,24 @@ subroutine orbitp
            tv(i,k)=t
            imax(k)=i
         endif
+        call RKADVC(dt,t,nvec,y1,icase,y2,cond,IERR)
         phipi=phip1
-        wpi=y1(6)**2/2.-phip1 ! Parallel energy at r0
-        if(wpi.gt.0)then
-           if(lprint)write(*,'(a,i6,a,f8.4,a,i5,a)')' Step=',i,' Positive Wp' &
-                ,wpi,' after',j,' bounces'
+        wpi=y2(6)**2/2.-phip1 ! Parallel energy at r0
+        if(wpi*wpp.lt.0.)then
+           if(lprint)write(*,'(a,i6,a,f8.4,a,i4,a)') &
+           ' Step=',i,' Wp sign flip' ,wpi,' after',j,' bounces'
            wpt=-wp0/psi
-           exit
+           wpp=wpi
+!           exit
         endif
-        if(abs(y1(3)).gt.20.)then
+        if((.not.abs(y2(3)).lt.20.).or.(.not.abs(y2(1)).lt.2.*y0(1)) &
+             .or..not.wpi.lt.10.)then
            if(lprint)write(*,'(a,i6,a,f6.2,a,f8.4,a,i4,a)')&
-           ' Step=',i,' z=',y1(3), &
+           ' Step=',i,' z=',y2(3), &
            ' Wp=',wpi,' after',j,' bounces'
            wpt=-wp0/psi
            exit
         endif
-        call RKADVC(dt,t,nvec,y1,icase,y2,cond,IERR)
         if(y2(3)*y1(3).le.0)then ! We crossed the z=0 center.
            if(j.eq.nbouncemax)exit
            j=j+1
@@ -367,23 +393,124 @@ subroutine orbitp
         write(*,73)' tb/2=',t/(j-1.), &
              ' tcyc=',2.*3.1415926/B,' ratio=',t/(j-1.)*B/2/3.1415926
      endif
-     call color(mod(k-1,14)+1)
-     call polymark(xi/3.1415926,wp/psi,j-2,3)
+     if(idoplots.ne.0)call color(mod(k-1,14)+1)
+     if(idoplots.ne.0)call polymark(xi/3.1415926,wp/psi,j-2,3)
   enddo
-  write(*,'(3f7.4,a)')Bsqpsi,wpt,Eropsi*sqrt(2.*(w0/psi-wpt)) &
-       ,'   b,wpt,Erovpsi3'
+! This was the write used for the JGR plot
+!  write(*,'(3f7.4,a)')Bsqpsi,wpt,Eropsi*sqrt(2.*(w0/psi-wpt)) &
+!       ,'   b,wpt,Ervopsi3'
+  if(iwritetype.eq.0)then
+     write(*,'(4f10.4,a)')Bsqpsi,psi,wpt,y1(1),'  Bsqpsi,psi,wpt,rfinal'
+  elseif(iwritetype.eq.1)then
+     write(*,'(5f10.4,a)')Omega,psi,wpt,y1(1),Bsqpsi,'  Omega,psi,wpt,rfinal,Bsqp'
+  endif
   do n=2,10,2
      wpr=((2.*B**2/n**2)**(-0.25)+1-2.**.25)**(-4)
-!     write(*,'(i2,5f8.4)')n,wpr,B,psi,W0
-!     call polyline([-1.,1.],[-wpr,-wpr],2)
   enddo
-  call pltend
+  if(idoplots.ne.0)call pltend
   
-  if(nwp.le.2)call doplots2(imax,wp0,w0,pt0)  
+  if(nwp.le.2.and.idoplots.ge.2)call doplots2(imax,wp0,w0,pt0)  
+  if(nwp.le.2.and.idoplots.ge.1)call doplots(imax,wp0,w0,pt0)  
 
 !  583 format(i5,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3)
   73 format(a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3)
 end subroutine orbitp
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine orbitmin
+  ! Find the threshold confinement Omega for a psi range and Eropsi range.
+  ! And plot it.
+  use orbitpoincare
+  integer, parameter :: nbscan=10,nbiter=5
+  real :: OmegaLmax
+  character*40 thestr,thewpf
+  character cel
+
+  if(lo)then
+     cel='L'
+     OmegaLmax=4
+  else
+     cel=' '
+     OmegaLmax=2
+  endif
+!  lp=.false.
+  wpf=wpm
+  call fwrite(wpf,iwidth,2,thewpf)
+  nwp=1
+  iwritetype=2         ! No writing from orbitp
+  idoplots=0
+  elmin=1./Eropsi
+  do k=1,nerp
+     Eropsi=1./(elmin*max(k-1.,0.5))
+     do i=1,npm
+        psi=psim*(i-.8)/(npm-.8)
+        if(lo)then
+           bmax=OmegaLmax*Eropsi
+        else
+           bmax=OmegaLmax
+        endif
+        do j=1,nbscan     ! Scan to find first confined orbit
+           Omega=bmax*j/nbscan
+           Bsqpsi=Omega/sqrt(psi)
+           call orbitp
+           if(wpt.eq.0)goto 1
+        enddo
+1       continue
+        b2=bmax*(j)/nbscan
+        b1=bmax*(j-1)/nbscan
+        do j=1,nbiter          ! Iterate to refine the threshold omega.
+           bb=(b2+b1)/2.
+           Omega=bb
+           Bsqpsi=Omega/sqrt(psi)
+           call orbitp
+           if(wpt.eq.0)then
+              b2=bb
+           else
+              b1=bb
+           endif
+        enddo
+        write(*,'(i3,a,f8.4,a,f8.4,a,f8.4)')i,' Eropsi=',Eropsi,' psi=',psi,' Omega=',bb
+        psiplot(i)=psi
+        omegaplot(i)=bb
+     enddo
+     if(k.eq.1)then
+        call pfset(3)
+        call pltinit(0.,psim,0.,OmegaLmax)
+        call charsize(.018,.018)
+        call axis
+        call axis2
+        call axlabels('!Ay!@', &
+             cel//'!AW!@ for W!d!A|!@t!d=-'//thewpf(1:iwidth)//'!Ay!@')
+        call winset(.true.)
+     endif
+     call fwrite(1./Eropsi,iwidth,1,thestr)
+     call color(k)
+     if(lo)then
+        call labeline(psiplot,omegaplot/Eropsi,npm,thestr,iwidth)
+     else
+        call labeline(psiplot,omegaplot,npm,thestr,iwidth)
+     endif
+  enddo 
+  do i=1,npm
+     omegaplot(i)=1.6*i/npm
+     xioL=(1+sqrt(1+2.*1/(omegaplot(i))**2))
+     if(lo)then
+        psiplot(i)=omegaplot(i)**2*xioL*exp(-xioL)
+        thestr=' Disruption'
+        yl=0.1
+     else
+        psiplot(i)=omegaplot(i)**2
+        thestr=' !AW!@=!Ay!@!u1/2!u'
+        yl=0.95
+     endif
+  enddo
+  call color(15)
+  call dashset(1)
+  call polyline(psiplot,omegaplot,npm)
+  call legendline(0.5,yl,257,' Labels: L')
+  call legendline(0.5,yl-0.05,0,thestr)
+  Eropsi=1./elmin
+  call pltend
+end subroutine orbitmin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 program mainpoincare
   use orbitpoincare
@@ -392,30 +519,62 @@ program mainpoincare
   do i=1,iargc()   ! Parse cmdline arguments.
      call getarg(i,string)
      if(string(1:2).eq.'-b')read(string(3:),*)Bsqpsi
-     if(string(1:2).eq.'-p')read(string(3:),*)psi
+     if(string(1:2).eq.'-O')then
+        read(string(3:),*)Omega
+        Bsqpsi=Omega/sqrt(psi)
+        iwritetype=1
+     endif
+     if(string(1:2).eq.'-p')then
+        if(Omega.ne.0.)then
+           write(*,*)'DANGER: setting psi after Omega. Do NOT.',Omega
+           stop
+        endif
+        read(string(3:),*)psi
+     endif
+     if(string(1:2).eq.'-q')then
+        read(string(3:),*)psi
+        psi=sqrt(psi)
+     endif
+     if(string(1:3).eq.'-nw')read(string(4:),*)nwp
+     if(string(1:3).eq.'-ns')read(string(4:),*)nstep
+     if(string(1:3).eq.'-mb')read(string(4:),*,end=103,err=103)wpm,psim,npm
+     if(string(1:3).eq.'-mE')read(string(4:),*,end=103,err=103)nerp
+103  continue
      if(string(1:2).eq.'-E')read(string(3:),*)Eropsi
      if(string(1:2).eq.'-r')read(string(3:),*)y0(1)
      if(string(1:2).eq.'-f')read(string(3:),*)wpf
      if(string(1:2).eq.'-W')read(string(3:),*)W0
      if(string(1:2).eq.'-w')read(string(3:),*)wn0
      if(string(1:2).eq.'-a')read(string(3:),*)alpha
-     if(string(1:3).eq.'-nw')read(string(4:),*)nwp
-     if(string(1:3).eq.'-ns')read(string(4:),*)nstep
-     if(string(1:3).eq.'-c')lp=.not.lp
-     if(string(1:3).eq.'-d')lprint=.not.lprint
+     if(string(1:2).eq.'-v')read(string(3:),*)vangle0
+     if(string(1:2).eq.'-c')lp=.not.lp
+     if(string(1:2).eq.'-L')lo=.not.lo
+     if(string(1:2).eq.'-d')lprint=.not.lprint
      if(string(1:2).eq.'-h')goto 201
      if(string(1:2).eq.'-?')goto 201
   enddo
   if(wn0.gt.-10.)w0=psi*wn0
+  if(Omega.eq.0)Omega=Bsqpsi*sqrt(psi)
 
-  call orbitp
+  if(wpm.eq.0)then
+     call orbitp
+  else            ! Find minimum confined
+     call orbitmin
+  endif
   call exit
   
 201 continue
   write(*,*)'Usage orbitpoincare [flags]'
-  write(*,*)'-b... B/sqpsi, -p... psi, -E... Er/psi, -r... r0, -W... W0, -w ... w0'
+  write(*,*)'-b... B/sqpsi, -p... psi, -q... sqrt(psi), -E... Er/psi, -r... r0'
+  write(*,*)'-W... W0 (total energy), -w ... w0 (normalized alternate)'
+  write(*,*)'-O... Omega, resets actual B/sqpsi value; use after all -p'
   write(*,*)'-nw... N-energies [if 1 plot orbits], -f... the single energy'
-  write(*,*)'-ns... N-steps, -c run continuously -d do not write -h help'
   write(*,*)'-a... set alpha power to concentrate wp values near zero. '
+  write(*,*)'-v... set vangle0 degrees of initial velocity to direction r/y.'
+  write(*,*)'-ns... N-steps, -c run continuously, -d do not write, -h help'
+
+  write(*,*)'-mb[<wpm>,<psim>,<npm>] Find the minimum B that confines the orbit'
+  write(*,*)'      of fractional depth wpm, up to psimax [0.5], in npm steps [100]'
+  write(*,*)'-mE   set number of different Eropsi for -mb call.'
 end program mainpoincare
 
