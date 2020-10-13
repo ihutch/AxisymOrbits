@@ -3,8 +3,9 @@ module orbitpoincare
   real :: Bsqpsi=.85, Eropsi=.01, psi=1., Omega=0.
   real :: r0,wpf=0.5,B,w0=1.,alpha=1.,wpt
   real :: wpm=0.,psim=0.5   ! Minimum confined energy, for psimax
-  integer, parameter :: npmmax=100
-  real, dimension(npmmax) :: psiplot,omegaplot
+  integer, parameter :: npmmax=100,nerpmax=20
+  real, dimension(npmmax,nerpmax) :: psiplot
+  real, dimension(npmmax,nerpmax,2) :: omegaplot
   integer :: nerp=1,npm=npmmax   ! n Eropsi's, psi divisions of psimax
   logical :: lp=.true.,lprint=.true.,lo=.true.
   integer, parameter :: nbouncemax=200  ! Max bounces to store.
@@ -40,18 +41,20 @@ contains
     subroutine getfield(y,t,icase,E)
       real y(6),t,E(3)
       integer icase
-!      psir=psi*(1.+(r0-y(1))*Eropsi) ! Inconsistent with Er/psi=const.
-      psir=psi*exp((r0-y(1))*Eropsi)  ! Local psi(r) 
+      psir=psi*max((1.+(r0-y(1))*Eropsi),0.) ! Linear 
+!      psir=psi*exp((r0-y(1))*Eropsi)         ! Exponential psi(r) 
       sc=1./cosh(y(3)/4.)
-      phi=psir*sc**4
-      E(1)=Eropsi*phi
+      E(1)=0.
+      if(psir.gt.0.)E(1)=Eropsi*psi*sc**4    ! Linear
+!      E(1)=Eropsi*psir*sc**4                 !Exponential
       E(2)=0.
       E(3)=psir*sinh(y(3)/4.)*sc**5
     end subroutine getfield
 !***********************************************************************
     real function psiofrz(rh,zh)
       cc=1./cosh(zh/4.)
-      psir=psi*exp((r0-rh)*Eropsi)
+      psir=psi*max((1.+(r0-rh)*Eropsi),0.)      ! Linear
+!      psir=psi*exp((r0-rh)*Eropsi)              ! Exponential
       psiofrz=cc**4*psir
     end function psiofrz
 !***********************************************************************
@@ -422,17 +425,12 @@ subroutine orbitmin
   use orbitpoincare
   integer, parameter :: nbscan=10,nbiter=5
   real :: OmegaLmax
+  real, dimension(npmmax) :: xioL,opp,ppp
   character*40 thestr,thewpf
-  character cel
+  character*2 cel
 
-  if(lo)then
-     cel='L'
-     OmegaLmax=4
-  else
-     cel=' '
-     OmegaLmax=2
-  endif
-!  lp=.false.
+  cel='L '
+  OmegaLmax=4.
   wpf=wpm
   call fwrite(wpf,iwidth,2,thewpf)
   nwp=1
@@ -443,17 +441,15 @@ subroutine orbitmin
      Eropsi=1./(elmin*max(k-1.,0.5))
      do i=1,npm
         psi=psim*(i-.8)/(npm-.8)
-        if(lo)then
-           bmax=OmegaLmax*Eropsi
-        else
-           bmax=OmegaLmax
-        endif
-        do j=1,nbscan     ! Scan to find first confined orbit
+        bmax=max(OmegaLmax*Eropsi,sqrt(psim))
+2        do j=1,nbscan     ! Scan to find first confined orbit
            Omega=bmax*j/nbscan
            Bsqpsi=Omega/sqrt(psi)
            call orbitp
-           if(wpt.eq.0)goto 1
+           if(wpt.eq.0)goto 1  ! A confined orbit.
         enddo
+        bmax=bmax*1.5 !   If we did not find confined orbit, increment bmax
+        goto 2
 1       continue
         b2=bmax*(j)/nbscan
         b1=bmax*(j-1)/nbscan
@@ -469,47 +465,47 @@ subroutine orbitmin
            endif
         enddo
         write(*,'(i3,a,f8.4,a,f8.4,a,f8.4)')i,' Eropsi=',Eropsi,' psi=',psi,' Omega=',bb
-        psiplot(i)=psi
-        omegaplot(i)=bb
+        psiplot(i,k)=psi
+        omegaplot(i,k,2)=bb
+        omegaplot(i,k,1)=bb/Eropsi
      enddo
-     if(k.eq.1)then
-        call pfset(3)
-        call pltinit(0.,psim,0.,OmegaLmax)
-        call charsize(.018,.018)
-        call axis
-        call axis2
-        call axlabels('!Ay!@', &
-             cel//'!AW!@ for W!d!A|!@t!d=-'//thewpf(1:iwidth)//'!Ay!@')
-        call winset(.true.)
-     endif
-     call fwrite(1./Eropsi,iwidth,1,thestr)
-     call color(k)
-     if(lo)then
-        call labeline(psiplot,omegaplot/Eropsi,npm,thestr,iwidth)
-     else
-        call labeline(psiplot,omegaplot,npm,thestr,iwidth)
-     endif
-  enddo 
-  do i=1,npm
-     omegaplot(i)=1.6*i/npm
-     xioL=(1+sqrt(1+2.*1/(omegaplot(i))**2))
-     if(lo)then
-        psiplot(i)=omegaplot(i)**2*xioL*exp(-xioL)
-        thestr=' Disruption'
-        yl=0.1
-     else
-        psiplot(i)=omegaplot(i)**2
-        thestr=' !AW!@=!Ay!@!u1/2!u'
-        yl=0.95
-     endif
   enddo
-  call color(15)
-  call dashset(1)
-  call polyline(psiplot,omegaplot,npm)
-  call legendline(0.5,yl,257,' Labels: L')
-  call legendline(0.5,yl-0.05,0,thestr)
+! Plotting
+  call pfset(3)
+  do i=1,2
+     call pltinit(0.,psim,0.,OmegaLmax/i)
+     call charsize(.018,.018)
+     call axis
+     call axis2
+     call axlabels('!Ay!@', &
+       cel(i:i)//'!AW!@ for W!d!A|!@t!d=-'//thewpf(1:iwidth)//'!Ay!@')
+     call winset(.true.)
+     do k=1,nerp
+        Eropsi=1./(elmin*max(k-1.,0.5))
+        call fwrite(1./Eropsi,iwidth,1,thestr)
+        call color(k)
+        call labeline(psiplot,omegaplot(:,k,i),npm,thestr,iwidth)
+!        write(*,*)k,i,omegaplot(1:3,k,i)
+     enddo
+     call color(15)
+     call dashset(1)
+     opp=1.6/npm*[(j,j=1,npmmax)]
+     if(i.eq.1)then
+        xioL=(1+sqrt(1+2.*1/opp**2))
+        ppp=opp**2*xioL*exp(-xioL)
+        yl=0.1
+        call legendline(0.5,yl-0.05,0,' Disruption')
+     else
+        ppp=opp**2
+        yl=0.95
+        call legendline(0.5,yl-0.05,0,' !AW!@=!Ay!@!u1/2!u')
+     endif
+     call legendline(0.5,yl,257,' Labels: L')
+     call polyline(ppp,opp,npm)
+     call dashset(0)
+     call pltend
+  enddo
   Eropsi=1./elmin
-  call pltend
 end subroutine orbitmin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 program mainpoincare
@@ -553,6 +549,7 @@ program mainpoincare
      if(string(1:2).eq.'-h')goto 201
      if(string(1:2).eq.'-?')goto 201
   enddo
+  if(nerp.gt.nerpmax)stop 'nerp specified too big'
   if(wn0.gt.-10.)w0=psi*wn0
   if(Omega.eq.0)Omega=Bsqpsi*sqrt(psi)
 
@@ -576,5 +573,6 @@ program mainpoincare
   write(*,*)'-mb[<wpm>,<psim>,<npm>] Find the minimum B that confines the orbit'
   write(*,*)'      of fractional depth wpm, up to psimax [0.5], in npm steps [100]'
   write(*,*)'-mE   set number of different Eropsi for -mb call.'
+  write(*,*)'-L    toggle plotting disruption/resonance scaling'
 end program mainpoincare
 
