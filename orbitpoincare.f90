@@ -8,6 +8,10 @@ module orbitpoincare
   real, dimension(npmmax,nerpmax,2) :: omegaplot
   integer :: nerp=1,npm=npmmax   ! n Eropsi's, psi divisions of psimax
   logical :: lp=.true.,lprint=.true.,lo=.true.
+  logical :: lzyg=.false.,lgread=.false.,lhread=.false.,lphibuiltin=.false.
+!  integer, parameter :: Lzg=100         ! Size max of read in phi
+!  real, dimension(-1:Lzg+1,-1:Lzg+1) :: phiguarded
+!  real, dimension(0:Lzg) :: zg,yg
   integer, parameter :: nbouncemax=200  ! Max bounces to store.
   integer, parameter :: nplot=25000     ! Max steps to store.
   integer, parameter :: nvec=6
@@ -38,25 +42,96 @@ contains
       ierr=0
     end subroutine RKFUN
 !***********************************************************************
+    subroutine getfield1(y,t,icase,E)
+      real y(6),t,E(3)
+      integer icase
+!      psir=psi*max((1.+(r0-y(1))*Eropsi),0.) ! Linear 
+      psir=psi*exp((r0-y(1))*Eropsi)         ! Exponential psi(r) 
+      sc=1./cosh(y(3)/4.)
+      E(1)=0.
+!      if(psir.gt.0.)E(1)=Eropsi*psi*sc**4    ! Linear
+      E(1)=Eropsi*psir*sc**4                 !Exponential
+      E(2)=0.
+      E(3)=psir*sinh(y(3)/4.)*sc**5
+    end subroutine getfield1
+!***********************************************************************
     subroutine getfield(y,t,icase,E)
       real y(6),t,E(3)
       integer icase
-      psir=psi*max((1.+(r0-y(1))*Eropsi),0.) ! Linear 
-!      psir=psi*exp((r0-y(1))*Eropsi)         ! Exponential psi(r) 
-      sc=1./cosh(y(3)/4.)
-      E(1)=0.
-      if(psir.gt.0.)E(1)=Eropsi*psi*sc**4    ! Linear
-!      E(1)=Eropsi*psir*sc**4                 !Exponential
-      E(2)=0.
-      E(3)=psir*sinh(y(3)/4.)*sc**5
+      integer, parameter :: Lzg=100         ! Size max of read in phi
+      real, dimension(-1:Lzg+1,-1:Lzg+1) :: phiguarded
+      real, dimension(0:Lzg) :: zg,yg
+      integer nzf,nyf
+      real :: zrf,yrf
+      save
+      if(lphibuiltin)then 
+         call getfield1(y,t,icase,E)
+      else
+         if(.not.lgread)then
+            call inputphi(Lzg,nzf,nyf,zg,yg,phiguarded)
+            zrf=(zg(nzf)-zg(0))
+            yrf=(yg(nyf)-yg(0))
+            lgread=.true.
+         endif
+         
+         zs=(y(3)-zg(0))/zrf
+         ys=(y(1)-yg(0))/yrf
+         zsa=abs(zs)   ! We read in only positive z.
+         if(zs.gt.1.or.ys.gt.1)then
+            gy=0. ! Hack 
+            gz=0.
+         else
+            call grad2dint(phiguarded,nzf,nzf,nyf,zsa,ys,gz,gy)
+         endif
+         E(1)=-gy/yrf
+         E(2)=0.
+         E(3)=sign(gz/zrf,zs)
+!         if(zsa.lt.1)write(*,*)E(3),gz,zs
+      endif
     end subroutine getfield
 !***********************************************************************
-    real function psiofrz(rh,zh)
+    real function psiofrz1(rh,zh)
       cc=1./cosh(zh/4.)
-      psir=psi*max((1.+(r0-rh)*Eropsi),0.)      ! Linear
-!      psir=psi*exp((r0-rh)*Eropsi)              ! Exponential
-      psiofrz=cc**4*psir
+!      psir=psi*max((1.+(r0-rh)*Eropsi),0.)      ! Linear
+      psir=psi*exp((r0-rh)*Eropsi)              ! Exponential
+      psiofrz1=cc**4*psir
+    end function psiofrz1
+!***********************************************************************
+    real function psiofrz(rh,zh)
+      real rh,zh
+      integer, parameter :: Lzg=100         ! Size max of read in phi
+      real, dimension(-1:Lzg+1,-1:Lzg+1) :: phiguarded
+      real, dimension(0:Lzg) :: zg,yg
+      real :: zrf,yrf
+      external bilin2d
+      save
+      if(lphibuiltin)then
+         psiofrz=psiofrz1(rh,zh)
+      else
+         if(.not.lhread)then
+         ! This packs as phiguarded(-1:nzf+1,-1,nyf+1)
+            call inputphi(Lzg,nzf,nyf,zg,yg,phiguarded)
+            zrf=(zg(nzf)-zg(0))
+            yrf=(yg(nzf)-yg(0))
+            psi=phiguarded(0,0)
+            lhread=.true.
+!            write(*,*)nzf,nyf,zrf,yrf
+!            stop
+         endif
+         zs=(zh-zg(0))/zrf
+         zsa=abs(zs)
+         ys=(rh-yg(0))/yrf
+         if(zsa.gt.1.or.ys.gt.1)then
+             ! Hack 
+            psiofrz=0.
+         else
+         psiofrz=bilin2d(phiguarded,nzf,nzf,nyf,zsa,ys) ! Say it is full rank
+         endif
+!         write(*,*)rh,zh,ys,zs,psiofrz
+      endif
     end function psiofrz
+!***********************************************************************
+!***********************************************************************
 !***********************************************************************
     subroutine doplots2(imax,wp0,w0,pt0)
       integer, dimension(2) :: imax
@@ -78,24 +153,21 @@ contains
       call ticnumset(4)
       call charsize(.015,.015)
       call axis
-      call jdrwstr(.08,wy2ny(r0+.5),'r',-1.)
+      call jdrwstr(.08,wy2ny((rmax+rmin)/2),'r',-1.)
       call winset(.true.)
       call color(4)
       call polymark(z,r,1,1)
       call polyline(z,r,imax)
       call color(15)
-!      call pltend
 
-!      call autoplot(z,vz**2/2.-phip,imax)
       call pltinit(zmin,zmax,wmin,0.02)
       call charsize(.015,.015)
       call axis
-      call jdrwstr(.08,wy2ny(-0.6*wpf),'W!d!A|!@!d',-1.)
+      call jdrwstr(.08,wy2ny((wmin+.02)/2.),'W!d!A|!@!d',-1.)
       call winset(.true.)
       call color(4); call polyline(z,vz**2/2.-phip,imax)
       call polymark(z,vz**2/2.-phip,1,1)
       call color(1);
-!      write(*,*)'imax=',imax
       call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax)
       call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
       call color(15)
@@ -105,7 +177,8 @@ contains
 
       do i=1,nzplot
          zplot(i)=zmin+(zmax-zmin)*(i-1.)/(nzplot-1)
-         psiplot(i)=-psi/cosh(zplot(i)/4.)**4
+         psiplot(i)=-psiofrz(r(1,1),zplot(i))
+!         psiplot(i)=-psi/cosh(zplot(i)/4.)**4
       enddo
       call pltinit(zmin,zmax,-psi-.1,0.1)
       call charsize(.015,.015)
@@ -114,7 +187,7 @@ contains
       call axptset(1.,0.)
       call ticrev; call altyaxis(Eropsi,Eropsi); call ticrev
       call axptset(0.,0.)
-      call jdrwstr(.08,wy2ny(-.2*psi),'W!d!A|!@!d',-1.)
+      call jdrwstr(.08,wy2ny(-.5*psi),'W!d!A|!@!d',-1.)
       call jdrwstr(.12,wy2ny(-.2*psi),'-!Af!@',1.)
       call jdrwstr(.96,wy2ny(-.2*psi),'-E!dr!d',-1.)
       call winset(.true.)
@@ -274,14 +347,99 @@ end module orbitpoincare
 !
    RETURN
    END
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Given a 2D function h(i,j) on a uniform grid, find its x and y gradients
+! interpolated to position (x,y). Leading dimension of h is Lx+3>=nx+3.
+! Gradients are piecewise linear. which causes a 2nd order magnitude
+! reduction, but is fully adequate when h is a finite difference solution.
+! Boundaries are specified by guard cells that go beyond allowed position.
+! Positions are normalized such that x(0)=0, x(nx)=1. etc. So guard cells
+! are x(-1)=-dx, x(nx+1)=1+dx, and allowed range is 0<=x<=1.
+! Index will over-run if x is .ge. dx/2 past the allowed range.
+! To use for a range xp0<xp<xpnx, pass x=(xp-xp0)/(xpnx-xp0) 
+! and use returned gradient as dh/dxp=gx/(xpnx-xp0). (Et sim, y)
+
+      subroutine grad2dint(h,Lx,nx,ny,x,y,gx,gy)
+      integer Lx,nx,ny
+      real h(-1:Lx+1,-1:ny+1),x,y,gx,gy
+
+      im=int(x*nx)   ! Grid before
+      ip=im+1        ! Grid after
+      ig=nint(x*nx)  ! Nearest grid
+      fx=x*nx-im     ! Transverse fraction
+      fxg=x*nx-ig    ! Gradient fraction
+!      write(*,*)ip,im,ig,x,nx
+
+      jm=int(y*ny)
+      jp=jm+1
+      jg=nint(y*ny)
+      fy=y*ny-jm
+      fyg=y*ny-jg
+!      write(*,*)jp,jm,jg,x,nx
+
+      gxjp=(h(ig+1,jp)-h(ig,jp))*(0.5+fxg)                                  &
+     &     +(h(ig,jp)-h(ig-1,jp))*(0.5-fxg)
+      gxjm=(h(ig+1,jm)-h(ig,jm))*(0.5+fxg)                                  &
+     &     +(h(ig,jm)-h(ig-1,jm))*(0.5-fxg)
+      gx=(gxjm*(1.-fy)+gxjp*fy)*nx
+
+      gyip=(h(ip,jg+1)-h(ip,jg))*(0.5+fyg)                                  &
+     &     +(h(ip,jg)-h(ip,jg-1))*(0.5-fyg)
+      gyim=(h(im,jg+1)-h(im,jg))*(0.5+fyg)                                  &
+     &     +(h(im,jg)-h(im,jg-1))*(0.5-fyg)
+      gy=(gyim*(1.-fx)+gyip*fx)*ny
+      end
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Interpolate function h(i,j) on uniform grid bilinearly. 
+! See grad2dint above for domain scaling.
+      real function bilin2d(h,Lx,nx,ny,x,y)
+      integer Lx,nx,ny
+      real h(-1:Lx+1,-1:ny+1),x,y
+
+      im=int(x*nx)   ! Grid before
+      ip=im+1        ! Grid after
+      fx=x*nx-im     ! Transverse fraction
+      jm=int(y*ny)
+      jp=jm+1
+      fy=y*ny-jm
+      bilin2d=(h(im,jm)*(1-fx)+h(ip,jm)*fx)*(1-fy)                          &
+     &     + (h(im,jp)*(1-fx)+h(ip,jp)*fx)*fy
+      end
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine inputphi(Lz,nzf,nyf,z,y,phiguarded)
+! This reads into phiguarded as if it were 
+!    real phiguarded(-1:nzf+1,-1:nyf+1)
+! Subsequently access phiguarded accordingly. Overriding external def.
+    integer Lz,nzf,nyf
+    real phiguarded(*)
+    real z(0:Lz),y(0:Lz)
+    open(15,file='ftfphi.dat',status='old',form='unformatted',err=1)
+    read(15)nzf,nyf
+    if(nzf.gt.Lz.or.(nzf+3)*(nyf+3).gt.(Lz+3)**2) &
+        stop 'Incompatible phiguarded ranks'
+    read(15)(z(i),i=0,nzf),(y(i),i=0,nyf)
+    read(15)((phiguarded(i+(j-1)*(nzf+3)),i=1,nzf+3),j=1,nyf+3)
+    close(15)
+    write(*,*)'Read in ftfphi.dat successfully',nzf,nyf
+    return
+1   write(*,*)'No file ftfphi.dat opened. Potential read unsuccessful'
+    stop
+  end subroutine inputphi
+!*********************************************************************
+
+
 !***********************************************************************
 subroutine orbitp
   use orbitpoincare
   character*78 string
   integer, dimension(2) :: imax
+  real E(3)
 
   wpt=0.
-! We enter this point with w0,Bsqpsi,r,th,z set, vth=0 
+  phip1=psiofrz(r0,0.)  ! Sets psi
+  call getfield(y1,t,icase,E) ! Initializes more conveniently.
+! We enter this point with w0,Bsqpsi,r,th,z set, vth=0 by default
   B=Bsqpsi*sqrt(psi)
   dt=0.047/B
 !  dt=.01/B
@@ -307,6 +465,7 @@ subroutine orbitp
   call axlabels('!Ac!@/!Ap!@','W!d!A|!@!d/!Ay!@')
 endif
 
+
   do k=1,nwp
      t=0.
      if(nwp.le.2)then
@@ -321,23 +480,22 @@ endif
      vmod0=sqrt(2.*(w0-wp0))
      y1(4)=cos(vangle0*3.1415926/180.)*vmod0
      y1(5)=sin(vangle0*3.1415926/180.)*vmod0
-     pt0=y1(1)*y1(5)-B*y1(1)**2/2.
-! The following is assuming y0(5)=0. which is not necessarily true
-! It needs to be the gyrocenter.
-!  r0=y0(1)
-! Instead we better approximate it as the place where y0(5) is zero
-! although that is not perfect
-     r0=sqrt(-2.*pt0/B)
+     pt0=y1(1)*y1(5)-B*y1(1)**2/2.   ! r*vt-B*r^2/2. = p_theta
+! Approximate gyrocenter as the place where y0(5)=vtheta is zero, but
+! there is no such place when the orbit encircles r=0.
+!     r0=sqrt(-2.*pt0/B)
+! So better to say it is one gyro-radius away from particle (y1)
+! in frame rotating with ExB velocity v_tExB=-Er/Bz
+     xg=y1(1)*cos(y1(2))-(y1(5)+E(1)/B)/B   ! r*cos(t) -(vt-vExB)/B
+     yg=y1(1)*sin(y1(2))+y1(4)/B   ! r*sin(t) + vr/B
+     r0=sqrt(xg**2+yg**2)
      if(lprint.and.k.eq.nwp)write(*,*)'rc0=',r0
-     phip1=psiofrz(r0,y0(3))
+     if(wp0+phip1.lt.0)then
+        write(*,*)'Starting with wp0',wp0,' below -phip1',-phip1
+        write(*,*)'at r0=',r0,' z0=',y0(3)
+        stop
+     endif
      y1(6)=sqrt(2.*(wp0+phip1))
-! Obsolete:
-! Set vr and vz consistent with Wp=-psi/2.
-!     phip1=psiofrz(y0(1),y0(3))
-!     y0(6)=sqrt(phip1)  ! Make wp=vz^2/2-phi equal to -phi/2
-!     y0(4)=sqrt(2.*(phip1+w0)-y0(6)**2) ! Give vr the rest of energy.
-! These velocities are changed in the energy scans below.  
-!  w0=(y0(4)**2+y0(5)**2+y0(6)**2)/2.-phip1 ! The unnormalized W (not w)
 
      if(lprint)write(*,'(i3,a,f8.4,a,f8.4,$)')k,' Wp0=',wp0,' vz=',y1(6)
      j=0
@@ -369,7 +527,8 @@ endif
            wpp=wpi
 !           exit
         endif
-        if((.not.abs(y2(3)).lt.20.).or.(.not.abs(y2(1)).lt.2.*y0(1)) &
+        if((.not.abs(y2(3)).lt.20.)  &
+!             .or.(.not.abs(y2(1)).lt.2.*y0(1)) &  ! No good for low r.
              .or..not.wpi.lt.10.)then
            if(lprint)write(*,'(a,i6,a,f6.2,a,f8.4,a,i4,a)')&
            ' Step=',i,' z=',y2(3), &
@@ -380,6 +539,7 @@ endif
         if(y2(3)*y1(3).le.0)then ! We crossed the z=0 center.
            if(j.eq.nbouncemax)exit
            j=j+1
+!           write(*,*)r0,y2(3)
            phip1=psiofrz(r0,y2(3)) ! Evaluate new phi at ~gyrocenter
            f1=abs(y2(3))/(abs(y1(3))+abs(y2(3)))
            f2=abs(y1(3))/(abs(y1(3))+abs(y2(3)))
