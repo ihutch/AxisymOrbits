@@ -15,7 +15,7 @@ module orbitpoincare
   integer, parameter :: nbouncemax=200  ! Max bounces to store.
   integer, parameter :: nplot=25000     ! Max steps to store.
   integer, parameter :: nvec=6
-  integer :: iwritetype=0,idoplots=2
+  integer :: iwritetype=0,idoplots=2,irktype=0
   integer :: nwp=39,nstep=1000000       ! Default maximum steps to take.
   real, dimension(nplot,2) :: r,th,z,vr,vt,vz,w,tv,pt,xplot,yplot,phip,Ep
   real, dimension(nbouncemax) :: wp,xi,tc
@@ -28,19 +28,19 @@ contains
      real yp(6),y(6),t
      integer icase,ierr
 ! Lorentz RK advance function. Evaluates derivative of y into yp.
-! Cylindrical coordinates r theta z, vr, vt, vz
      real E(3)  ! Er,Et(=0),Ez
 ! Evaluate E.
      call getfield(y,t,icase,E)
 ! Enter derivatives.
-      yp(1)=y(4)        ! vr
-      yp(2)=y(5)/y(1)   ! vt/r = d/dt theta
-      yp(3)=y(6)        ! vz
-      yp(4)=y(5)**2/y(1)-E(1)-y(5)*B   ! vt^2/r -Er-vt*B
-      yp(5)=-y(4)*y(5)/y(1)+y(4)*B    ! -vr*vt/r+vr*B 
-      yp(6)=-E(3)
-      ierr=0
-    end subroutine RKFUN
+! Cylindrical coordinates r theta z, vr, vt, vz
+     yp(1)=y(4)        ! vr
+     yp(2)=y(5)/y(1)   ! vt/r = d/dt theta
+     yp(3)=y(6)        ! vz
+     yp(4)=y(5)**2/y(1)-E(1)-y(5)*B   ! vt^2/r -Er-vt*B
+     yp(5)=-y(4)*y(5)/y(1)+y(4)*B    ! -vr*vt/r+vr*B 
+     yp(6)=-E(3)
+     ierr=0
+   end subroutine RKFUN
 !***********************************************************************
     subroutine getfield1(y,t,icase,E)
       real y(6),t,E(3)
@@ -73,7 +73,6 @@ contains
             yrf=(yg(nyf)-yg(0))
             lgread=.true.
          endif
-         
          zs=(y(3)-zg(0))/zrf
          ys=(y(1)-yg(0))/yrf
          zsa=abs(zs)   ! We read in only positive z.
@@ -86,7 +85,6 @@ contains
          E(1)=-gy/yrf
          E(2)=0.
          E(3)=sign(gz/zrf,zs)
-!         if(zsa.lt.1)write(*,*)E(3),gz,zs
       endif
     end subroutine getfield
 !***********************************************************************
@@ -113,9 +111,7 @@ contains
             call inputphi(Lzg,nzf,nyf,zg,yg,phiguarded)
             zrf=(zg(nzf)-zg(0))
             yrf=(yg(nzf)-yg(0))
-            psi=phiguarded(0,0)
             lhread=.true.
-!            write(*,*)nzf,nyf,zrf,yrf
 !            stop
          endif
          zs=(zh-zg(0))/zrf
@@ -153,7 +149,7 @@ contains
       call ticnumset(4)
       call charsize(.015,.015)
       call axis
-      call jdrwstr(.08,wy2ny((rmax+rmin)/2),'r',-1.)
+      call jdrwstr(.03,wy2ny((rmax+rmin)/2),'r',-1.)
       call winset(.true.)
       call color(4)
       call polymark(z,r,1,1)
@@ -163,7 +159,7 @@ contains
       call pltinit(zmin,zmax,wmin,0.02)
       call charsize(.015,.015)
       call axis
-      call jdrwstr(.08,wy2ny((wmin+.02)/2.),'W!d!A|!@!d',-1.)
+      call jdrwstr(.03,wy2ny((wmin+.02)/2.),'W!d!A|!@!d',-1.)
       call winset(.true.)
       call color(4); call polyline(z,vz**2/2.-phip,imax)
       call polymark(z,vz**2/2.-phip,1,1)
@@ -180,14 +176,14 @@ contains
          psiplot(i)=-psiofrz(r(1,1),zplot(i))
 !         psiplot(i)=-psi/cosh(zplot(i)/4.)**4
       enddo
-      call pltinit(zmin,zmax,-psi-.1,0.1)
+      call pltinit(zmin,zmax,-psi-.2*psi,0.03)
       call charsize(.015,.015)
       call axis
       call axlabels('z','')
       call axptset(1.,0.)
       call ticrev; call altyaxis(Eropsi,Eropsi); call ticrev
       call axptset(0.,0.)
-      call jdrwstr(.08,wy2ny(-.5*psi),'W!d!A|!@!d',-1.)
+      call jdrwstr(.03,wy2ny(-.5*psi),'W!d!A|!@!d',-1.)
       call jdrwstr(.12,wy2ny(-.2*psi),'-!Af!@',1.)
       call jdrwstr(.96,wy2ny(-.2*psi),'-E!dr!d',-1.)
       call winset(.true.)
@@ -437,14 +433,20 @@ subroutine orbitp
   real E(3)
 
   wpt=0.
-  phip1=psiofrz(r0,0.)  ! Sets psi
+  phip1=psiofrz(y0(1),0.)
+  psi=phip1
   call getfield(y1,t,icase,E) ! Initializes more conveniently.
 ! We enter this point with w0,Bsqpsi,r,th,z set, vth=0 by default
-  B=Bsqpsi*sqrt(psi)
+  if(iwritetype.eq.1)then
+     Bsqpsi=Omega/sqrt(psi)
+     B=Omega
+  else
+     B=Bsqpsi*sqrt(psi)
+  endif
   dt=0.047/B
 !  dt=.01/B
   if(lprint)write(*,73)'w0=',w0,' Eropsi=',Eropsi,' Bsqpsi=',Bsqpsi,&
-       ' psi=',psi,' r0=',y0(1) !,' rho0=', y0(4)/B
+       ' psi=',psi,' r0=',y0(1),' B=',B !,' rho0=', y0(4)/B
 
   if(idoplots.ne.0)then
   if(lp)then
@@ -517,7 +519,7 @@ endif
            tv(i,k)=t
            imax(k)=i
         endif
-        call RKADVC(dt,t,nvec,y1,icase,y2,cond,IERR)
+        call RKADVC(dt,t,nvec,y1,irktype,y2,cond,IERR)
         phipi=phip1
         wpi=y2(6)**2/2.-phip1 ! Parallel energy at r0
         if(wpi*wpp.lt.0.)then
@@ -677,8 +679,8 @@ program mainpoincare
      if(string(1:2).eq.'-b')read(string(3:),*)Bsqpsi
      if(string(1:2).eq.'-O')then
         read(string(3:),*)Omega
-        Bsqpsi=Omega/sqrt(psi)
-        iwritetype=1
+        Bsqpsi=Omega/sqrt(psi)  ! Maybe not necessary now.
+        iwritetype=1   ! Determines Omega setting has preference.
      endif
      if(string(1:2).eq.'-p')then
         if(Omega.ne.0.)then
