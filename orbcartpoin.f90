@@ -611,95 +611,6 @@ subroutine orbitp
   73 format(a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3)
 end subroutine orbitp
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine orbitmin
-  ! Find the threshold confinement Omega for a psi range and Eropsi range.
-  ! And plot it.
-  use orbcartpoin
-  integer, parameter :: nbscan=10,nbiter=5
-  real :: OmegaLmax
-  real, dimension(npmmax) :: xioL,opp,ppp
-  character*40 thestr,thewpf
-  character*2 cel
-
-  cel='L '
-  OmegaLmax=4.
-  wpf=wpm
-  call fwrite(wpf,iwidth,2,thewpf)
-  nwp=1
-  iwritetype=2         ! No writing from orbitp
-  idoplots=0
-  elmin=1./Eropsi
-  do k=1,nerp
-     Eropsi=1./(elmin*max(k-1.,0.5))
-     do i=1,npm
-        psi=psim*(i-.8)/(npm-.8)
-        bmax=max(OmegaLmax*Eropsi,sqrt(psim))
-2        do j=1,nbscan     ! Scan to find first confined orbit
-           Omega=bmax*j/nbscan
-           Bsqpsi=Omega/sqrt(psi)
-           call orbitp
-           if(wpt.eq.0)goto 1  ! A confined orbit.
-        enddo
-        bmax=bmax*1.5 !   If we did not find confined orbit, increment bmax
-        goto 2
-1       continue
-        b2=bmax*(j)/nbscan
-        b1=bmax*(j-1)/nbscan
-        do j=1,nbiter          ! Iterate to refine the threshold omega.
-           bb=(b2+b1)/2.
-           Omega=bb
-           Bsqpsi=Omega/sqrt(psi)
-           call orbitp
-           if(wpt.eq.0)then
-              b2=bb
-           else
-              b1=bb
-           endif
-        enddo
-        write(*,'(i3,a,f8.4,a,f8.4,a,f8.4)')i,' Eropsi=',Eropsi,' psi=',psi,' Omega=',bb
-        psiplot(i,k)=psi
-        omegaplot(i,k,2)=bb
-        omegaplot(i,k,1)=bb/Eropsi
-     enddo
-  enddo
-! Plotting
-  call pfset(3)
-  do i=1,2
-     call pltinit(0.,psim,0.,OmegaLmax/i)
-     call charsize(.018,.018)
-     call axis
-     call axis2
-     call axlabels('!Ay!@', &
-       cel(i:i)//'!AW!@ for W!d!A|!@t!d=-'//thewpf(1:iwidth)//'!Ay!@')
-     call winset(.true.)
-     do k=1,nerp
-        Eropsi=1./(elmin*max(k-1.,0.5))
-        call fwrite(1./Eropsi,iwidth,1,thestr)
-        call color(k)
-        call labeline(psiplot,omegaplot(:,k,i),npm,thestr,iwidth)
-!        write(*,*)k,i,omegaplot(1:3,k,i)
-     enddo
-     call color(15)
-     call dashset(1)
-     opp=1.6/npm*[(j,j=1,npmmax)]
-     if(i.eq.1)then
-        xioL=(1+sqrt(1+2.*1/opp**2))
-        ppp=opp**2*xioL*exp(-xioL)
-        yl=0.1
-        call legendline(0.5,yl-0.05,0,' Disruption')
-     else
-        ppp=opp**2
-        yl=0.95
-        call legendline(0.5,yl-0.05,0,' !AW!@=!Ay!@!u1/2!u')
-     endif
-     call legendline(0.5,yl,257,' Labels: L')
-     call polyline(ppp,opp,npm)
-     call dashset(0)
-     call pltend
-  enddo
-  Eropsi=1./elmin
-end subroutine orbitmin
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine profilemin
   ! A modification of orbitmin so that the psi range is a range
   ! of radial positions. And we still find threshold Omega for confinement. 
@@ -827,7 +738,6 @@ program mainpoincare
   if(wpm.eq.0)then
      call orbitp
   else            ! Find minimum confined
-!     call orbitmin
      call profilemin
   endif
   call exit
