@@ -3,10 +3,11 @@
   ! And uses a file read in to specify the potential and E-field.
 module orbcartpoin
   real :: Bsqpsi=.85, Eropsi=.01, psi=1., Omega=0.
-  real :: r0,wpf=0.5,B,w0=1.,alpha=1.,wpt
+  real :: r0,rc0,rg0,rpmin,rpmax,wpf=0.5,B,w0=1.,alpha=1.,wpt
   real :: wpm=0.,psim=0.5   ! Minimum confined energy, for psimax
+  real :: yrfmax,zrfmax
   integer, parameter :: npmmax=100,nerpmax=20
-  real, dimension(npmmax,nerpmax) :: psiplot
+  real, dimension(npmmax,nerpmax) :: psiplot,riplot
   real, dimension(npmmax,nerpmax,2) :: omegaplot
   integer :: nerp=1,npm=npmmax   ! n Eropsi's, psi divisions of psimax
   logical :: lp=.true.,lprint=.true.,lo=.true.
@@ -21,6 +22,7 @@ module orbcartpoin
   real, dimension(nbouncemax) :: wp,xi,tc
   real, dimension(nvec) :: y0,y1,y2
   real ::  vangle0=0.          ! Angle of initial v to r-direction degrees.
+  character*30 :: filename='ftfphi.dat'
   data y0/10.,0.,0.,0.,0.,0./ !Initial orbit (position) defaults
 contains
 !***********************************************************************
@@ -54,7 +56,9 @@ contains
       save
       if(.not.lgread)then
          call inputphi(Lzg,nzf,nyf,zg,yg,phiguarded)
+         zrfmax=zg(nzf)
          zrf=(zg(nzf)-zg(0))
+         yrfmax=yg(nyf)
          yrf=(yg(nyf)-yg(0))
          lgread=.true.
       endif
@@ -64,12 +68,20 @@ contains
          zsa=abs(zs)
          rh=sqrt(y(1)**2+y(2)**2+1.e-24)
          rs=(rh-yg(0))/yrf
-         if(zs.gt.1.or.rs.gt.1)then
-            gy=0. ! Hack 
-            gz=0.
-         else
+         if(zsa.le.1.and.rs.le.1)then
             call grad2dint(phiguarded,nzf,nzf,nyf,zsa,rs,gz,gy)
+            expfac=1.
+         elseif(zsa.le.1)then  ! Extrapolation approximations.
+            call grad2dint(phiguarded,nzf,nzf,nyf,zsa,1.,gz,gy)
+            expfac=exp(-(rh-yg(nyf)))
+         elseif(rs.le.1)then
+            call grad2dint(phiguarded,nzf,nzf,nyf,1.,rs,gz,gy)
+            expfac=exp(-(abs(y(3))-zg(nzf)))
+         else
+            call grad2dint(phiguarded,nzf,nzf,nyf,1.,1.,gz,gy)
          endif
+         gz=gz*expfac
+         gy=gy*expfac
          E(1)=-gy/yrf*y(1)/rh
          E(2)=-gy/yrf*y(2)/rh
          E(3)=sign(gz/zrf,zs)         
@@ -84,32 +96,63 @@ contains
       real :: zrf,yrf
       external bilin2d
       save
-         if(.not.lhread)then
+      if(.not.lhread)then
          ! This packs as phiguarded(-1:nzf+1,-1,nyf+1)
-            call inputphi(Lzg,nzf,nyf,zg,yg,phiguarded)
-            zrf=(zg(nzf)-zg(0))
-            yrf=(yg(nzf)-yg(0))
-            lhread=.true.
-!            stop
-         endif
-         zs=(zh-zg(0))/zrf
-         zsa=abs(zs)
-         ys=(rh-yg(0))/yrf
-         if(zsa.gt.1.or.ys.gt.1)then
-             ! Hack 
-            psiofrz=0.
-         else
+         call inputphi(Lzg,nzf,nyf,zg,yg,phiguarded)
+         zrfmax=zg(nzf)
+         zrf=(zg(nzf)-zg(0))
+         yrfmax=yg(nyf)
+         yrf=(yg(nyf)-yg(0))
+         lhread=.true.
+      endif
+      zs=(zh-zg(0))/zrf
+      zsa=abs(zs)
+      ys=(rh-yg(0))/yrf
+      if(zsa.le.1.and.ys.le.1)then
          psiofrz=bilin2d(phiguarded,nzf,nzf,nyf,zsa,ys) ! Say it is full rank
-         endif
+         expfac=1.
+      elseif(zsa.le.1)then  ! Extrapolation approximations.
+         psiofrz=bilin2d(phiguarded,nzf,nzf,nyf,zsa,1.)
+         expfac=exp(-(rh-yg(nyf)))
+      elseif(ys.le.1)then
+         psiofrz=bilin2d(phiguarded,nzf,nzf,nyf,1.,ys)
+         expfac=exp(-(abs(zh)-zg(nzf)))
+      else
+         psiofrz=bilin2d(phiguarded,nzf,nzf,nyf,1.,1.)
+         expfac=exp(-sqrt((rh-yg(nyf))**2+(abs(zh)-zg(nzf))**2))
+      endif
+      psiofrz=psiofrz*expfac
 !         write(*,*)rh,zh,ys,zs,psiofrz
     end function psiofrz
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine inputphi(Lz,nzf,nyf,z,y,phiguarded)
+! This reads into phiguarded as if it were 
+!    real phiguarded(-1:nzf+1,-1:nyf+1)
+! Subsequently access phiguarded accordingly. Overriding external def.
+    integer Lz,nzf,nyf
+    real phiguarded(*)
+    real z(0:Lz),y(0:Lz)
+    open(15,file=filename,status='old',form='unformatted',err=1)
+    read(15)nzf,nyf
+    if(nzf.gt.Lz.or.(nzf+3)*(nyf+3).gt.(Lz+3)**2) &
+        stop 'Incompatible phiguarded ranks'
+    read(15)(z(i),i=0,nzf),(y(i),i=0,nyf)
+    read(15)((phiguarded(i+(j-1)*(nzf+3)),i=1,nzf+3),j=1,nyf+3)
+    close(15)
+    write(*,'(3a,i4,f7.3,i4,f7.3)')'Read in ',filename(1:lentrim(filename)), &
+         ' successfully. z, r: ',nzf,z(nzf),nyf,y(nyf)
+    return
+1   write(*,*)'No file ',filename(1:lentrim(filename)),   &
+         ' opened. Potential read unsuccessful'
+    stop
+  end subroutine inputphi
 !***********************************************************************
 !***********************************************************************
 !***********************************************************************
     subroutine doplots2(imax,wp0,w0,pt0)
       integer, dimension(2) :: imax
       integer, parameter :: nzplot=100
-      real, dimension(nzplot) :: zlplot,psilplot
+      real, dimension(nzplot) :: zlplot,psilplot,psicplot
       if(lp)then; call pfset(3); else; call pfset(-3);
       endif
 
@@ -128,50 +171,66 @@ contains
       call axis
       call jdrwstr(.03,wy2ny((rmax+rmin)/2),'r',-1.)
       call winset(.true.)
+      call dashset(1)
+      call polyline([zmin,zmax],[rc0,rc0],2)
+      call dashset(0)
       call color(4)
-      call polymark(z,r,1,1)
       call polyline(z,r,imax)
+      call color(2)
+      call polymark(z,rpmax,1,2)
+      call polymark(z,rpmin,1,3)
       call color(15)
-
+      call polymark(z,r,1,1)
+      
       call pltinit(zmin,zmax,wmin,0.02)
       call charsize(.015,.015)
       call axis
       call jdrwstr(.03,wy2ny((wmin+.02)/2.),'W!d!A|!@!d',-1.)
       call winset(.true.)
       call color(4); call polyline(z,vz**2/2.-phip,imax)
-      call polymark(z,vz**2/2.-phip,1,1)
-      call color(1);
-      call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax)
-      call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
+      if(nwp.eq.2)then
+         call color(1);
+         call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax)
+         call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
+      endif
       call color(15)
+      call polymark(z,vz**2/2.-phip,1,1)
       call dashset(4)
       call polyline([zmin,zmax],[0.,0.],2)
       call dashset(0)
 
       do i=1,nzplot
          zlplot(i)=zmin+(zmax-zmin)*(i-1.)/(nzplot-1)
-         psilplot(i)=-psiofrz(r0,zlplot(i))
-!         psilplot(i)=-psiofrz(r(1,1),zlplot(i))
-!         write(*,*)i,zlplot(i),psilplot(i),r(1,1)
+!         psicplot(i)=-psiofrz(rc0,zlplot(i))     ! At initial gyrocenter.
+         psicplot(i)=-psiofrz(rmin,zlplot(i))     ! At lowest r.
+         psilplot(i)=-psiofrz(r0,zlplot(i)) ! At initial r.
       enddo
-      call pltinit(zmin,zmax,-psi-.2*psi,0.03)
+      call pltinit(zmin,zmax,min(-psi-.2*psi,psicplot(nzplot/2)), &
+           -psicplot(nzplot/2)*.2)
       call charsize(.015,.015)
       call axis
       call axlabels('z','')
+      call jdrwstr(.03,wy2ny(-.5*psi),'W!d!A|!@!d',-1.)
+      if(.false.)then
       call axptset(1.,0.)
       call ticrev; call altyaxis(Eropsi,Eropsi); call ticrev
       call axptset(0.,0.)
-      call jdrwstr(.03,wy2ny(-.5*psi),'W!d!A|!@!d',-1.)
-      call jdrwstr(.12,wy2ny(-.2*psi),'-!Af!@',1.)
       call jdrwstr(.96,wy2ny(-.2*psi),'-E!dr!d',-1.)
+      endif
       call winset(.true.)
+      call color(1)
       call polyline(zlplot,psilplot,nzplot)
-      call color(1);
-      call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax)
+      call jdrwstr(.12,wy2ny(0.)-.02,'-!Af!@(r!d0!d)',1.)
+      call color(2)
+      call polyline(zlplot,psicplot,nzplot)
+      call jdrwstr(.12,wy2ny(0.)-.05,'-!Af!@(r!dmin!d)',1.)
+!      call color(1);
+!      call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax)
 !      call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
       call color(4); call polyline(z,vz**2/2.-phip,imax)
 !      call polymark(z,vz**2/2.-phip,1,1)
       call color(15)
+      call polymark(z,vz**2/2.-phip,1,1)
       call pltend
 
     end subroutine doplots2
@@ -204,27 +263,28 @@ contains
       
       call autoplot(tv,(w-w0),imax)
       call axlabels('t','Dw')
-!      call pltend
-      
 !      call autoplot(tv,(pt-pt0)/pt0,imax) ! Problem is pt0 can be zero.
       call autoplot(tv,(pt-pt0)/r0,imax)
       call axlabels('t','Dpt')
       call pltend
 
       call multiframe(0,0,0)
-     
-!      call autoplot(r,(vr**2+vt**2)/2.-phip,imax)
-!      call axlabels('r','(v!dr!d!u2!u+v!d!At!@!d!u2!u)/2-!Af!@')
-!      call pltend
-     
-!      call autoplot(z,Ep,imax)
-!      call axlabels('z','Ep')
-!      call pltend
 
       call charsize(.018,.018)
-      call autoplot(xplot,yplot,imax)
+!      call autoplot(xplot,yplot,imax)
+      call minmax(xplot,imax,xpmin,xpmax)
+      call fitrange(xpmin,xpmax,6,ipow,fac10,delta,xfirst,xlast)
+      call minmax(yplot,imax,ypmin,ypmax)
+      call fitrange(ypmin,ypmax,6,ipow,fac10,delta,yfirst,ylast)
+      call pltinaspect(xfirst,xlast,yfirst,ylast)
+      call axis; call axis2
+      call polyline(xplot,yplot,imax)
       call axlabels('x','y')
+      call color(4)
+      call polymark(xplot,yplot,1,1)
+      call color(15)
       call pltend
+      call multiframe(0,0,0)
 
       call minmax(xplot,imax,xmin,xmax)
       call minmax(yplot,imax,ymin,ymax)
@@ -381,26 +441,6 @@ end module orbcartpoin
      &     + (h(im,jp)*(1-fx)+h(ip,jp)*fx)*fy
       end
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine inputphi(Lz,nzf,nyf,z,y,phiguarded)
-! This reads into phiguarded as if it were 
-!    real phiguarded(-1:nzf+1,-1:nyf+1)
-! Subsequently access phiguarded accordingly. Overriding external def.
-    integer Lz,nzf,nyf
-    real phiguarded(*)
-    real z(0:Lz),y(0:Lz)
-    open(15,file='ftfphi.dat',status='old',form='unformatted',err=1)
-    read(15)nzf,nyf
-    if(nzf.gt.Lz.or.(nzf+3)*(nyf+3).gt.(Lz+3)**2) &
-        stop 'Incompatible phiguarded ranks'
-    read(15)(z(i),i=0,nzf),(y(i),i=0,nyf)
-    read(15)((phiguarded(i+(j-1)*(nzf+3)),i=1,nzf+3),j=1,nyf+3)
-    close(15)
-    write(*,*)'Read in ftfphi.dat successfully',nzf,nyf
-    return
-1   write(*,*)'No file ftfphi.dat opened. Potential read unsuccessful'
-    stop
-  end subroutine inputphi
 !*********************************************************************
 
 
@@ -412,7 +452,8 @@ subroutine orbitp
   real E(3)
 
   wpt=0.
-  phip1=psiofrz(y0(1),0.)
+  r0=y0(1)
+  phip1=psiofrz(r0,0.)
   psi=phip1
   call getfield(y1,t,irktype,E) ! Initializes more conveniently.
 ! We enter this point with w0,Bsqpsi,r,th,z set, vth=0 by default
@@ -424,27 +465,22 @@ subroutine orbitp
   endif
   dt=0.047/B
 !  dt=.01/B
-  if(lprint)write(*,73)'w0=',w0,' Eropsi=',Eropsi,' Bsqpsi=',Bsqpsi,&
+  if(lprint)write(*,'(a,f4.1,a,f5.2,a,f6.3,a,f5.2,a,f6.3,$)') &
+       'w0=',w0,' Bsqpsi=',Bsqpsi,&
        ' psi=',psi,' r0=',y0(1),' B=',B !,' rho0=', y0(4)/B
 
   if(idoplots.ne.0)then
-  if(lp)then
-     call pfset(3)    ! Display and output plots
-  else
-     call pfset(-3)   ! Run continuously outputing plots
+     if(lp)then
+        call pfset(3)    ! Display and output plots
+     else
+        call pfset(-3)   ! Run continuously outputing plots
+     endif
+     call pltinit(-.99999,1.,-1.,0.)
+     call charsize(.018,.018)
+     call axis
+     call axis2
+     call axlabels('!Ac!@/!Ap!@','W!d!A|!@!d(r!d0!d)/!Ay!@')
   endif
-  call pltinit(-.99999,1.,-1.,0.)
-  call charsize(.018,.018)
-! Thermal rho=1/B.  
-     write(string,'(a,f4.2,a,f5.3,a,f4.2,a,f4.2,a,f4.2,a)') &
-       'W=',w0,' E!dr!d/!Ay!@=',Eropsi &
-       ,' !AW!@/!A)y!@=',Bsqpsi,' !Ar!@/r!d0!d=',1./(B*y0(1)) &
-       ,' !Ay!@=',psi
-  call boxtitle(string)
-  call axis
-  call axis2
-  call axlabels('!Ac!@/!Ap!@','W!d!A|!@!d/!Ay!@')
-endif
 
 
   do k=1,nwp
@@ -462,18 +498,28 @@ endif
      y1(4)=cos(vangle0*3.1415926/180.)*vmod0
      y1(5)=sin(vangle0*3.1415926/180.)*vmod0
      pt0=y1(1)*y1(5)-B*y1(1)**2/2.   ! r*vt-B*r^2/2. = p_theta
-! Approximate gyrocenter as the place where y0(5)=vtheta is zero, but
-! there is no such place when the orbit encircles r=0.
-!     r0=sqrt(-2.*pt0/B)
-! So better to say it is one gyro-radius away from particle (y1)
+! Approximate gyrocenter is one gyro-radius away from particle (y1)
 ! in frame rotating with ExB velocity v_tExB=-Er/Bz
      xg=y1(1)*cos(y1(2))-(y1(5)+E(1)/B)/B   ! r*cos(t) -(vt-vExB)/B
-     yg=y1(1)*sin(y1(2))+y1(4)/B   ! r*sin(t) + vr/B
-     r0=sqrt(xg**2+yg**2)
-     if(lprint.and.k.eq.nwp)write(*,*)'rc0=',r0
+     yg=y1(1)*sin(y1(2))+y1(4)/B            ! r*sin(t) + vr/B
+     rc0=sqrt(xg**2+yg**2)                            ! gyro-center radius
+     rg0=sqrt(((y1(5)+E(1)/B)/B)**2+(y1(4)/B)**2)     ! gyro-radius
+     rpmax=rc0+rg0
+     rpmin=abs(rc0-rg0)
+!      write(*,*)rc0,rg0,rpmin,rpmax
+
+     if(k.eq.1)then
+        psic=psiofrz(rc0,0.)
+        if(lprint)write(*,'(a,f5.2,a,f5.3)')' rc0=',rc0,' psic=',psic
+! Thermal rho=1/B.
+        write(string,'(a,f5.3,a,f4.2,a,f5.3,a,f4.2,a,f4.2,a)')&
+             'B=',Omega,' W=',w0,' !Ay!@=',psi,' r!d0!d=',y0(1),' r!dc0!d=',rc0
+        if(idoplots.ne.0)call boxtitle(string(1:lentrim(string)))
+        call winset(.true.)
+     endif
      if(wp0+phip1.lt.0)then
         write(*,*)'Starting with wp0',wp0,' below -phip1',-phip1
-        write(*,*)'at r0=',r0,' z0=',y0(3)
+        write(*,*)'at rc0=',rc0,' z0=',y0(3)
         stop
      endif
      y1(6)=sqrt(2.*(wp0+phip1))
@@ -505,8 +551,8 @@ endif
         phipi=phip1
         wpi=y2(6)**2/2.-phip1 ! Parallel energy at r0
         if(wpi*wpp.lt.0.)then
-           if(lprint)write(*,'(a,i6,a,f8.4,a,i4,a)') &
-           ' Step=',i,' Wp sign flip' ,wpi,' after',j,' bounces'
+           if(lprint.and..false.)write(*,'(a,i6,a,f8.4,a,i4,a)') &
+           ' Step=',i,' Wp sign flip' ,wpi,' after',j-1,' bounces'
            wpt=-wp0/psi
            wpp=wpi
 !           exit
@@ -516,18 +562,19 @@ endif
              .or..not.wpi.lt.10.)then
            if(lprint)write(*,'(a,i6,a,f6.2,a,f8.4,a,i4,a)')&
            ' Step=',i,' z=',y2(3), &
-           ' Wp=',wpi,' after',j,' bounces'
+           ' Wp=',wpi,' after',j-1,' bounces'
            wpt=-wp0/psi
            exit
         endif
         if(y2(3)*y1(3).le.0)then ! We crossed the z=0 center.
            if(j.eq.nbouncemax)exit
            j=j+1
-!           write(*,*)r0,y2(3)
-           phip1=psiofrz(r0,y2(3)) ! Evaluate new phi at ~gyrocenter
+!           phip1=psiofrz(rc0,y2(3)) ! Evaluate new phi at ~gyrocenter
+           phip1=psiofrz(r0,y2(3)) ! Evaluate new phi at original radius
            f1=abs(y2(3))/(abs(y1(3))+abs(y2(3)))
            f2=abs(y1(3))/(abs(y1(3))+abs(y2(3)))
            tc(j)=t
+
            wp(j)= f1*(y1(6)**2/2.-phipi) &  ! old
                  +f2*(y2(6)**2/2.-phip1)    ! new
            xi(j)=atan2(y1(5),y1(4))
@@ -538,7 +585,8 @@ endif
      if((i.eq.nstep+1.or.j.eq.nbouncemax).and.lprint)then
         write(*,'(a,i4,$)')' j=',j
         write(*,73)' tb/2=',t/(j-1.), &
-             ' tcyc=',2.*3.1415926/B,' ratio=',t/(j-1.)*B/2/3.1415926
+             ' tcyc=',2.*3.1415926/B,' ratio=',t/(j-1.)*B/2/3.1415926 
+!             ,' rc0=',rc0
      endif
      if(idoplots.ne.0)call color(mod(k-1,14)+1)
      if(idoplots.ne.0)call polymark(xi/3.1415926,wp/psi,j-2,3)
@@ -652,12 +700,91 @@ subroutine orbitmin
   Eropsi=1./elmin
 end subroutine orbitmin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine profilemin
+  ! A modification of orbitmin so that the psi range is a range
+  ! of radial positions. And we still find threshold Omega for confinement. 
+  use orbcartpoin
+  integer, parameter :: nbscan=10,nbiter=7
+  real, dimension(npmmax) :: xioL,opp,ppp
+  character*40 thestr,thewpf
+  character*2 cel
+
+  cel='L '
+  OmegaLmax=Omega
+  phip1=psiofrz(r0,0.)
+!  call getfield(y1,t,irktype,E) ! Initializes more conveniently.
+  nwp=1
+  iwritetype=2         ! No writing from orbitp
+  idoplots=0
+
+  call pfset(3)
+  call pltinit(0.,yrfmax,0.,OmegaLmax)
+  call charsize(.018,.018)
+  call axis
+  call axis2
+  call axlabels('r',' ')
+  call fwrite(wpm,iwidth,2,thewpf)
+  call boxtitle('W!d!A|!@!d/!Ay!@='//thewpf(1:lentrim(thewpf)))
+  do k=1,nerp
+     wpf=1-(1-wpm)*k/nerp
+     call fwrite(wpf,iwidth,2,thewpf)
+     do i=1,npm   ! Here we have a range of r-positions.
+        ri=(i-0.5)*yrfmax/npm
+        psi=psiofrz(ri,0.)
+        y0(1)=ri
+        bmax=max(OmegaLmax,sqrt(psi))
+!     write(*,*)ri,psi,wpf
+2       do j=1,nbscan     ! Scan to find first confined orbit
+           Omega=bmax*j/nbscan
+           Bsqpsi=Omega/sqrt(psi)
+           call orbitp
+           if(wpt.eq.0)goto 1  ! A confined orbit.
+        enddo
+        bmax=bmax*1.5 !   If we did not find confined orbit, increment bmax
+        goto 2
+1       continue
+        b2=bmax*(j)/nbscan
+        b1=bmax*(j-1)/nbscan
+        do j=1,nbiter          ! Iterate to refine the threshold omega.
+           bb=(b2+b1)/2.
+           Omega=bb
+           Bsqpsi=Omega/sqrt(psi)
+           call orbitp
+           if(wpt.eq.0)then
+              b2=bb
+           else
+              b1=bb
+           endif
+        enddo
+        if(i.eq.1)rcr0=rc0
+        write(*,'(i3,a,f8.5,a,f8.4,a,f8.4)')i,' psi=',psi,' Omega=',bb
+        riplot(i,k)=ri
+        psiplot(i,k)=psi
+        omegaplot(i,k,1)=bb
+     enddo
+     call winset(.true.)
+     call labeline(riplot,omegaplot(:,k,1),npm,thewpf,iwidth)
+     call legendline(.7,.8,0,' !AW!@!dt!d')
+     call dashset(4)
+     call polyline([0.,rcr0],[1.,1.]*omegaplot(1,k,1),2)
+     call drcstr(' r!dg0!d')
+     call dashset(0)
+  enddo
+  call dashset(1)
+  call color(1)
+  call polyline(riplot,psiplot,npm)
+  call legendline(.01,.03,0,' !Ay!@')
+  call dashset(0)
+  call pltend
+end subroutine profilemin
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 program mainpoincare
   use orbcartpoin
   character*30 :: string
   real :: wn0=-10. ! Unset normalized w.
   do i=1,iargc()   ! Parse cmdline arguments.
      call getarg(i,string)
+     if(string(1:1).ne.'-')read(string,*)filename
      if(string(1:2).eq.'-b')read(string(3:),*)Bsqpsi
      if(string(1:2).eq.'-O')then
         read(string(3:),*)Omega
@@ -700,15 +827,16 @@ program mainpoincare
   if(wpm.eq.0)then
      call orbitp
   else            ! Find minimum confined
-     call orbitmin
+!     call orbitmin
+     call profilemin
   endif
   call exit
   
 201 continue
-  write(*,*)'Usage orbcartpoin [flags]'
+  write(*,*)'Usage orbcartpoin [flags] [filename]'
   write(*,*)'-b... B/sqpsi, -p... psi, -q... sqrt(psi), -E... Er/psi, -r... r0'
   write(*,*)'-W... W0 (total energy), -w ... w0 (normalized alternate)'
-  write(*,*)'-O... Omega, resets actual B/sqpsi value; use after all -p'
+  write(*,*)'-O... Omega, resets actual B, B/sqpsi value; use after all -p'
   write(*,*)'-nw... N-energies [if 1 plot orbits], -f... the single energy'
   write(*,*)'-a... set alpha power to concentrate wp values near zero. '
   write(*,*)'-v... set vangle0 degrees of initial velocity to direction r/y.'
@@ -716,7 +844,7 @@ program mainpoincare
 
   write(*,*)'-mb[<wpm>,<psim>,<npm>] Find the minimum B that confines the orbit'
   write(*,*)'      of fractional depth wpm, up to psimax [0.5], in npm steps [100]'
-  write(*,*)'-mE   set number of different Eropsi for -mb call.'
+  write(*,*)'-mE   set number of different cases (Eropsi,wpf) for -mb call.'
   write(*,*)'-L    toggle plotting disruption/resonance scaling'
 end program mainpoincare
 
