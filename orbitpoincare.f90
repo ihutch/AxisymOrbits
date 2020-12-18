@@ -1,4 +1,5 @@
-  ! Integrate orbits in a specified potential to generate a poicare plot
+  ! Integrate orbits in a specified potential to generate a poincare plot
+  ! This version is purely axisymmetric with specified radius r0.
 module orbitpoincare
   real :: Bsqpsi=.85, Eropsi=.01, psi=1., Omega=0.
   real :: r0,wpf=0.5,B,w0=1.,alpha=1.,wpt
@@ -10,7 +11,7 @@ module orbitpoincare
   logical :: lp=.true.,lprint=.true.,lo=.true.
   logical :: lzyg=.false.,lgread=.false.,lhread=.false.,lphibuiltin=.false.
 !  integer, parameter :: Lzg=100         ! Size max of read in phi
-!  real, dimension(-1:Lzg+1,-1:Lzg+1) :: phiguarded
+!  real, dimension(-1:Lzg+1,-1:Lzg+1) :: phiguarded ! Local to getfield...
 !  real, dimension(0:Lzg) :: zg,yg
   integer, parameter :: nbouncemax=200  ! Max bounces to store.
   integer, parameter :: nplot=25000     ! Max steps to store.
@@ -21,6 +22,7 @@ module orbitpoincare
   real, dimension(nbouncemax) :: wp,xi,tc
   real, dimension(nvec) :: y0,y1,y2
   real ::  vangle0=0.          ! Angle of initial v to r-direction degrees.
+  character*30 :: filename='ftfphi.dat'
   data y0/10.,0.,0.,0.,0.,0./ !Initial orbit (position) defaults
 contains
 !***********************************************************************
@@ -64,22 +66,25 @@ contains
       integer nzf,nyf
       real :: zrf,yrf
       save
+1     continue
       if(lphibuiltin)then 
          call getfield1(y,t,icase,E)
       else
          if(.not.lgread)then
+            lgread=.true.
             call inputphi(Lzg,nzf,nyf,zg,yg,phiguarded)
+            if(lphibuiltin.eqv..true.)goto 1
             zrf=(zg(nzf)-zg(0))
             yrf=(yg(nyf)-yg(0))
-            lgread=.true.
          endif
          zs=(y(3)-zg(0))/zrf
          ys=(y(1)-yg(0))/yrf
          zsa=abs(zs)   ! We read in only positive z.
-         if(zs.gt.1.or.ys.gt.1)then
+         if(zsa.gt.1.or.ys.gt.1)then
             gy=0. ! Hack 
             gz=0.
          else
+!            if(zsa.ge.zrf.or.ys.ge.yrf)write(*,*)zsa,ys
             call grad2dint(phiguarded,nzf,nzf,nyf,zsa,ys,gz,gy)
          endif
          E(1)=-gy/yrf
@@ -103,16 +108,17 @@ contains
       real :: zrf,yrf
       external bilin2d
       save
+1     continue
       if(lphibuiltin)then
          psiofrz=psiofrz1(rh,zh)
       else
          if(.not.lhread)then
          ! This packs as phiguarded(-1:nzf+1,-1,nyf+1)
+            lhread=.true.
             call inputphi(Lzg,nzf,nyf,zg,yg,phiguarded)
+            if(lphibuiltin.eqv..true.)goto 1   ! Failed Read. Use builtin.
             zrf=(zg(nzf)-zg(0))
             yrf=(yg(nzf)-yg(0))
-            lhread=.true.
-!            stop
          endif
          zs=(zh-zg(0))/zrf
          zsa=abs(zs)
@@ -264,9 +270,32 @@ contains
       call prtend('')
       if(isw.ne.0.and.isw.ne.ichar('q'))goto 1
     end subroutine doplots
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine inputphi(Lz,nzf,nyf,z,y,phiguarded)
+! This reads into phiguarded as if it were: 
+!                            real phiguarded(-1:nzf+1,-1:nyf+1)
+! Subsequently access phiguarded accordingly. Overriding external def.
+      integer Lz,nzf,nyf
+      real phiguarded(*)
+      real z(0:Lz),y(0:Lz)
+      open(15,file=filename,status='old',form='unformatted',err=1)
+      read(15)nzf,nyf
+      if(nzf.gt.Lz.or.(nzf+3)*(nyf+3).gt.(Lz+3)**2) &
+           stop 'Incompatible phiguarded ranks'
+      read(15,end=1,err=1)(z(i),i=0,nzf),(y(i),i=0,nyf)
+      read(15,end=1,err=1)((phiguarded(i+(j-1)*(nzf+3)),i=1,nzf+3),j=1,nyf+3)
+      close(15)
+      write(*,*)'Read in ',filename(1:lentrim(filename)),' successfully',nzf,nyf
+!      if(y(nyf).gt.y0(1))y0(1)=y(nyf)  ! Don't allow start outside grid.
+!  Probably not needed.
+      return
+1     write(*,*)'File ',filename(1:lentrim(filename)),' could not be read.' &
+           ,' Using builtin potential form.'
+      lphibuiltin=.true.
+!      stop
+    end subroutine inputphi
 end module orbitpoincare
-
-
+!*********************************************************************
 !***********************************************************************
 !****************************************************************************
    SUBROUTINE RKADVC(DX,X0,ND,YR1,icase,YR2,cond,IERR)
@@ -371,8 +400,8 @@ end module orbitpoincare
       jg=nint(y*ny)
       fy=y*ny-jm
       fyg=y*ny-jg
-!      write(*,*)jp,jm,jg,x,nx
-
+!      if(ig+1.gt.Lx+1)write(*,*)ig,Lx,nx,x
+      
       gxjp=(h(ig+1,jp)-h(ig,jp))*(0.5+fxg)                                  &
      &     +(h(ig,jp)-h(ig-1,jp))*(0.5-fxg)
       gxjm=(h(ig+1,jm)-h(ig,jm))*(0.5+fxg)                                  &
@@ -402,27 +431,6 @@ end module orbitpoincare
      &     + (h(im,jp)*(1-fx)+h(ip,jp)*fx)*fy
       end
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine inputphi(Lz,nzf,nyf,z,y,phiguarded)
-! This reads into phiguarded as if it were 
-!    real phiguarded(-1:nzf+1,-1:nyf+1)
-! Subsequently access phiguarded accordingly. Overriding external def.
-    integer Lz,nzf,nyf
-    real phiguarded(*)
-    real z(0:Lz),y(0:Lz)
-    open(15,file='ftfphi.dat',status='old',form='unformatted',err=1)
-    read(15)nzf,nyf
-    if(nzf.gt.Lz.or.(nzf+3)*(nyf+3).gt.(Lz+3)**2) &
-        stop 'Incompatible phiguarded ranks'
-    read(15)(z(i),i=0,nzf),(y(i),i=0,nyf)
-    read(15)((phiguarded(i+(j-1)*(nzf+3)),i=1,nzf+3),j=1,nyf+3)
-    close(15)
-    write(*,*)'Read in ftfphi.dat successfully',nzf,nyf
-    return
-1   write(*,*)'No file ftfphi.dat opened. Potential read unsuccessful'
-    stop
-  end subroutine inputphi
-!*********************************************************************
 
 
 !***********************************************************************
@@ -435,7 +443,8 @@ subroutine orbitp
   wpt=0.
   phip1=psiofrz(y0(1),0.)
   psi=phip1
-  call getfield(y1,t,icase,E) ! Initializes more conveniently.
+  call getfield(y0,t,icase,E) ! Initializes more conveniently.
+  if(.not.lphibuiltin)Eropsi=E(1)/phip1
 ! We enter this point with w0,Bsqpsi,r,th,z set, vth=0 by default
   if(iwritetype.eq.1)then
      Bsqpsi=Omega/sqrt(psi)
@@ -457,14 +466,19 @@ subroutine orbitp
   call pltinit(-.99999,1.,-1.,0.)
   call charsize(.018,.018)
 ! Thermal rho=1/B.  
-     write(string,'(a,f4.2,a,f5.3,a,f4.2,a,f4.2,a,f4.2,a)') &
+     write(string,'(a,f3.1,a,f5.3,a,f4.2,a,f4.2,a,f5.3,a)') &
        'W=',w0,' E!dr!d/!Ay!@=',Eropsi &
        ,' !AW!@/!A)y!@=',Bsqpsi,' !Ar!@/r!d0!d=',1./(B*y0(1)) &
        ,' !Ay!@=',psi
   call boxtitle(string)
   call axis
   call axis2
-  call axlabels('!Ac!@/!Ap!@','W!d!A|!@!d/!Ay!@')
+  if(lphibuiltin)then
+     call axlabels('!Ac!@/!Ap!@','W!d!A|!@!d/!Ay!@')
+  else
+     call axlabels('!Ac!@/!Ap!@','W!d!A|!@!d/!Ay!@!dc!d')
+  endif
+  call winset(.true.)
 endif
 
 
@@ -473,8 +487,8 @@ endif
      if(nwp.le.2)then
         wp0=-(2*k-1)*wpf*psi
      else
-        wp0=-k*psi/(nwp+1.)
-        wp0=-psi*(k/(nwp+1.))**alpha
+!        wp0=-psi*(k/(nwp+1.))**alpha
+        wp0=-phip1*(k/(nwp+1.))**alpha ! Avoid problems with changing phip1
      endif
 ! Initial position (zero velocity)
      y1=y0
@@ -493,9 +507,9 @@ endif
      r0=sqrt(xg**2+yg**2)
      if(lprint.and.k.eq.nwp)write(*,*)'rc0=',r0
      if(wp0+phip1.lt.0)then
-        write(*,*)'Starting with wp0',wp0,' below -phip1',-phip1
-        write(*,*)'at r0=',r0,' z0=',y0(3)
-        stop
+        write(*,*)'NOT Starting with wp0',wp0,' below -phip1',-phip1
+        write(*,*)'at r0=',r0,' z0=',y0(3),' psi=',psi
+        goto 12
      endif
      y1(6)=sqrt(2.*(wp0+phip1))
 
@@ -558,8 +572,15 @@ endif
         write(*,73)' tb/2=',t/(j-1.), &
              ' tcyc=',2.*3.1415926/B,' ratio=',t/(j-1.)*B/2/3.1415926
      endif
-     if(idoplots.ne.0)call color(mod(k-1,14)+1)
-     if(idoplots.ne.0)call polymark(xi/3.1415926,wp/psi,j-2,3)
+     if(idoplots.ne.0)then
+        call color(mod(k-1,14)+1)
+        if(lphibuiltin)then
+           call polymark(xi/3.1415926,wp/psi,j-2,3)
+        else
+           call polymark(xi/3.1415926,wp/phip1,j-2,3)
+        endif
+     endif
+12   continue
   enddo
 ! This was the write used for the JGR plot
 !  write(*,'(3f7.4,a)')Bsqpsi,wpt,Eropsi*sqrt(2.*(w0/psi-wpt)) &
@@ -572,6 +593,10 @@ endif
   do n=2,10,2
      wpr=((2.*B**2/n**2)**(-0.25)+1-2.**.25)**(-4)
   enddo
+  call winset(.false.)
+  call color(15)
+  call fwrite(r0,iwidth,2,string)
+  call jdrwstr(0.3,0.67,'r!dc!d='//string(1:iwidth),-1.)
   if(idoplots.ne.0)call pltend
   
   if(nwp.le.2.and.idoplots.ge.2)call doplots2(imax,wp0,w0,pt0)  
@@ -676,6 +701,7 @@ program mainpoincare
   real :: wn0=-10. ! Unset normalized w.
   do i=1,iargc()   ! Parse cmdline arguments.
      call getarg(i,string)
+     if(string(1:1).ne.'-')read(string,*)filename
      if(string(1:2).eq.'-b')read(string(3:),*)Bsqpsi
      if(string(1:2).eq.'-O')then
         read(string(3:),*)Omega
@@ -723,7 +749,9 @@ program mainpoincare
   call exit
   
 201 continue
-  write(*,*)'Usage orbitpoincare [flags]'
+  write(*,*)'Usage orbitpoincare [-flags] [filename]'
+  write(*,*)'If filename is present, potential is read from it. Put last.' 
+  write(*,*)'Otherwise builtin potential form is used. Flags set parameters.'
   write(*,*)'-b... B/sqpsi, -p... psi, -q... sqrt(psi), -E... Er/psi, -r... r0'
   write(*,*)'-W... W0 (total energy), -w ... w0 (normalized alternate)'
   write(*,*)'-O... Omega, resets actual B/sqpsi value; use after all -p'

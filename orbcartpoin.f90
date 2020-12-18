@@ -3,7 +3,7 @@
   ! And uses a file read in to specify the potential and E-field.
 module orbcartpoin
   real :: Bsqpsi=.85, Eropsi=.01, psi=1., Omega=0.
-  real :: r0,rc0,rg0,rpmin,rpmax,wpf=0.5,B,w0=1.,alpha=1.,wpt
+  real :: r0,rc0,rg0,rpmin,rpmax,rpave,wpf=0.5,B,w0=1.,alpha=1.,wpt
   real :: wpm=0.,psim=0.5   ! Minimum confined energy, for psimax
   real :: yrfmax,zrfmax
   integer, parameter :: npmmax=100,nerpmax=20
@@ -503,10 +503,11 @@ subroutine orbitp
      yg=y1(1)*sin(y1(2))+y1(4)/B            ! r*sin(t) + vr/B
      rc0=sqrt(xg**2+yg**2)                            ! gyro-center radius
      rg0=sqrt(((y1(5)+E(1)/B)/B)**2+(y1(4)/B)**2)     ! gyro-radius
-     phip1=psiofrz(rc0,y1(3))               ! at initial gc case.
      rpmax=rc0+rg0
      rpmin=abs(rc0-rg0)
-!      write(*,*)rc0,rg0,rpmin,rpmax
+     rpave=(rpmax+rpmin)/2.
+!     phip1=psiofrz(rc0,y1(3))               ! at initial gc case.
+     phip1=psiofrz(rpave,y1(3))               ! at initial rpave case.
 
      if(k.eq.1)then
         psic=psiofrz(rc0,0.)
@@ -542,7 +543,8 @@ subroutine orbitp
            vz(i,k)=y1(6)
            phip(i,k)=psiofrz(r(i,k),y1(3))
 !           phir0(i,k)=psiofrz(r0,y1(3))
-           phir0(i,k)=psiofrz(rc0,y1(3))
+!           phir0(i,k)=psiofrz(rc0,y1(3))
+           phir0(i,k)=psiofrz(rpave,y1(3))
 !           Ep(i,k)=Eropsi*phip(i,k)
            w(i,k)=(vr(i,k)**2+vt(i,k)**2+vz(i,k)**2)/2.-phip(i,k)
            tv(i,k)=t
@@ -571,8 +573,9 @@ subroutine orbitp
         if(y2(3)*y1(3).le.0)then ! We crossed the z=0 center.
            if(j.eq.nbouncemax)exit
            j=j+1
-           phip1=psiofrz(rc0,y2(3)) ! Evaluate new phi at initial gyrocenter
+!           phip1=psiofrz(rc0,y2(3)) ! Evaluate new phi at initial gyrocenter
 !           phip1=psiofrz(r0,y2(3)) ! Evaluate new phi at original radius
+           phip1=psiofrz(rpave,y2(3)) ! Evaluate new phi at rpave
            f1=abs(y2(3))/(abs(y1(3))+abs(y2(3)))
            f2=abs(y1(3))/(abs(y1(3))+abs(y2(3)))
            tc(j)=t
@@ -580,7 +583,8 @@ subroutine orbitp
            wp(j)= f1*(y1(6)**2/2.-phipi) &  ! old
                  +f2*(y2(6)**2/2.-phip1)    ! new
            xi(j)=atan2(y1(5),y1(4))
-           if(wp(j).lt.-psi.or.wp(j).gt.0.)write(*,*)xi(j),wp(j)/psi
+           if(wp(j).lt.-phip1.or.wp(j).gt.0..and.j.le.30)  &
+            write(*,'(i5,a,f6.3,a,f8.4)')j,' xi=',xi(j),' wp/phip1=',wp(j)/phip1
         endif
         t=t+dt
         y1=y2
@@ -592,7 +596,6 @@ subroutine orbitp
 !             ,' rc0=',rc0
      endif
      if(idoplots.ne.0)call color(mod(k-1,14)+1)
-!     if(idoplots.ne.0)call polymark(xi/3.1415926,wp/psi,j-2,3)
      if(idoplots.ne.0)call polymark(xi/3.1415926,wp/phip1,j-2,3)
   enddo
 ! This was the write used for the JGR plot
