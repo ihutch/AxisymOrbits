@@ -1,9 +1,10 @@
   ! Integrate orbits in a specified potential to generate a poincare plot
   ! This version is purely axisymmetric with specified radius r0.
-module orbitpoincare
+module orbitpoincare 
   real :: Bsqpsi=.85, Eropsi=.01, psi=1., Omega=0.
-  real :: r0,wpf=0.5,B,w0=1.,alpha=1.,wpt
+  real :: wpf=0.5,B,w0=1.,aleph=1.,wpt, r0 !=Initial gyrocenter.
   real :: wpm=0.,psim=0.5   ! Minimum confined energy, for psimax
+  real :: dtxb=0.04363     ! dt x Omega=2pi/(steps per cyclotron period=144)
   integer, parameter :: npmmax=100,nerpmax=20
   real, dimension(npmmax,nerpmax) :: psiplot
   real, dimension(npmmax,nerpmax,2) :: omegaplot
@@ -19,10 +20,11 @@ module orbitpoincare
   integer :: iwritetype=0,idoplots=2,irktype=0
   integer :: nwp=39,nstep=1000000       ! Default maximum steps to take.
   real, dimension(nplot,2) :: r,th,z,vr,vt,vz,w,tv,pt,xplot,yplot,phip,Ep
+  real, dimension(nplot) :: xptemp,yptemp
   real, dimension(nbouncemax) :: wp,xi,tc
   real, dimension(nvec) :: y0,y1,y2
   real ::  vangle0=0.          ! Angle of initial v to r-direction degrees.
-  character*30 :: filename='ftfphi.dat'
+  character*30 :: filename='helmphiguard.dat'
   data y0/10.,0.,0.,0.,0.,0./ !Initial orbit (position) defaults
 contains
 !***********************************************************************
@@ -35,13 +37,13 @@ contains
      call getfield(y,t,icase,E)
 ! Enter derivatives.
 ! Cylindrical coordinates r theta z, vr, vt, vz
-     yp(1)=y(4)        ! vr
-     yp(2)=y(5)/y(1)   ! vt/r = d/dt theta
-     yp(3)=y(6)        ! vz
-     yp(4)=y(5)**2/y(1)-E(1)-y(5)*B   ! vt^2/r -Er-vt*B
-     yp(5)=-y(4)*y(5)/y(1)+y(4)*B    ! -vr*vt/r+vr*B 
-     yp(6)=-E(3)
-     ierr=0
+        yp(1)=y(4)        ! vr
+        yp(2)=y(5)/y(1)   ! vt/r = d/dt theta
+        yp(3)=y(6)        ! vz
+        yp(4)=y(5)**2/y(1)-E(1)-y(5)*B   ! vt^2/r -Er-vt*B
+        yp(5)=-y(4)*y(5)/y(1)+y(4)*B    ! -vr*vt/r+vr*B 
+        yp(6)=-E(3)
+        ierr=0
    end subroutine RKFUN
 !***********************************************************************
     subroutine getfield1(y,t,icase,E)
@@ -79,59 +81,86 @@ contains
          endif
          zs=(y(3)-zg(0))/zrf
          ys=(y(1)-yg(0))/yrf
-         zsa=abs(zs)   ! We read in only positive z.
-         if(zsa.gt.1.or.ys.gt.1)then
-            gy=0. ! Hack 
-            gz=0.
-         else
-!            if(zsa.ge.zrf.or.ys.ge.yrf)write(*,*)zsa,ys
-            call grad2dint(phiguarded,nzf,nzf,nyf,zsa,ys,gz,gy)
+         zsa=abs(zs)   ! We read in only positive z and y
+         ysa=abs(ys)
+         if(ys.lt.0.)then
+            write(*,*)
+            write(*,'(a)')'r is negative, probably because orbit went through 0'
+            write(*,'(a,6g10.2)')'r,t,z,vr,vt,vz=',y
+            write(*,'(a)')'Avoid this error by adjusting initial condition'
+            stop '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
          endif
-         E(1)=-gy/yrf
+  ! Interpolate gradients out to grid limits.       
+         call grad2dint(phiguarded,nzf,nzf,nyf,min(1.,zsa),min(1.,ysa),gz,gy)
+  ! Possibly Mock up potential decay outside the grid.
+         if(zsa.gt.1.or.ysa.gt.1)then
+            earg=exp(-sqrt((max(zsa,1.)-1.)*zrf**2+((max(ysa,1.)-1.)*yrf)**2))
+            gz=gz*earg
+            gy=gy*earg
+         endif
+!         E(1)=-gy/yrf
+         E(1)=sign(gy/yrf,ys)
          E(2)=0.
          E(3)=sign(gz/zrf,zs)
       endif
     end subroutine getfield
 !***********************************************************************
-    real function psiofrz1(rh,zh)
+    real function phiofrz1(rh,zh)
       cc=1./cosh(zh/4.)
 !      psir=psi*max((1.+(r0-rh)*Eropsi),0.)      ! Linear
       psir=psi*exp((r0-rh)*Eropsi)              ! Exponential
-      psiofrz1=cc**4*psir
-    end function psiofrz1
+      phiofrz1=cc**4*psir
+    end function phiofrz1
 !***********************************************************************
-    real function psiofrz(rh,zh)
+    real function phiofrz(rh,zh)
       real rh,zh
       integer, parameter :: Lzg=100         ! Size max of read in phi
-      real, dimension(-1:Lzg+1,-1:Lzg+1) :: phiguarded
+      integer, parameter :: nclv=24
+      real, dimension(-1:Lzg+1,-1:Lzg+1) :: phiguarded,work
       real, dimension(0:Lzg) :: zg,yg
+      real, dimension(nclv) :: zclv
       real :: zrf,yrf
       external bilin2d
       save
 1     continue
       if(lphibuiltin)then
-         psiofrz=psiofrz1(rh,zh)
+         phiofrz=phiofrz1(rh,zh)
       else
          if(.not.lhread)then
          ! This packs as phiguarded(-1:nzf+1,-1,nyf+1)
             lhread=.true.
             call inputphi(Lzg,nzf,nyf,zg,yg,phiguarded)
             if(lphibuiltin.eqv..true.)goto 1   ! Failed Read. Use builtin.
+! Contour the read-in potential for verification.
+            call charsize(0.018,0.018)
+            call pltinaspect(0.,zg(nzf),0.,yg(nyf))
+            call axis; call axis2; call axlabels('z','r')
+            ilmax=nint(alog10(phiguarded(0,0)))
+            do iclv=1,nclv
+               zclv(iclv)=10.**(ilmax+1)*10**(-float((iclv-1)/5)) &
+                    *(1.-0.2*mod(iclv+4,5))
+               if(iclv.eq.nclv)exit
+            enddo
+            icsw=1
+            call contourl(phiguarded(0,0),work,Lzg+3,nzf+1,nyf+1, &
+                 zclv,iclv,zg,yg,icsw)
+            call pltend
+            call multiframe(0,0,0)  ! Cancel frame aspect.
             zrf=(zg(nzf)-zg(0))
-            yrf=(yg(nzf)-yg(0))
+            yrf=(yg(nyf)-yg(0))
          endif
          zs=(zh-zg(0))/zrf
          zsa=abs(zs)
          ys=(rh-yg(0))/yrf
+! Interpolate without exceeding the phiguarded grid limits:
+         phiofrz=bilin2d(phiguarded,nzf,nzf,nyf,min(1.,zsa),min(1.,ys))
+! Possibly project beyond grid with exponential decay.
          if(zsa.gt.1.or.ys.gt.1)then
-             ! Hack 
-            psiofrz=0.
-         else
-         psiofrz=bilin2d(phiguarded,nzf,nzf,nyf,zsa,ys) ! Say it is full rank
+            phiofrz=phiofrz*exp(-sqrt(((max(1.,zsa)-1.)*zrf)**2 &
+                 +((max(1.,ys)-1.)*yrf)**2))
          endif
-!         write(*,*)rh,zh,ys,zs,psiofrz
       endif
-    end function psiofrz
+    end function phiofrz
 !***********************************************************************
 !***********************************************************************
 !***********************************************************************
@@ -143,6 +172,7 @@ contains
       endif
 
       np=min(nwp,2)
+      if(imax(np).le.0)return  ! imax was not set because no traces generated
       call multiframe(3,1,0)
       zmin=-10.
       zmax=10.
@@ -162,13 +192,20 @@ contains
       call polyline(z,r,imax)
       call color(15)
 
+      nbb=nint(3.1415926/dtxb)
+      call boxcarave(imax,nbb,z,xptemp)
+      call boxcarave(imax,nbb,vz**2/2.-phip,yptemp)
       call pltinit(zmin,zmax,wmin,0.02)
       call charsize(.015,.015)
       call axis
       call jdrwstr(.03,wy2ny((wmin+.02)/2.),'W!d!A|!@!d',-1.)
+      call color(2)
+      call jdrwstr(.03,wy2ny(0.01),'!p!o-!o!qW!d!A|!@!d',-0.1);call color(15)
       call winset(.true.)
       call color(4); call polyline(z,vz**2/2.-phip,imax)
       call polymark(z,vz**2/2.-phip,1,1)
+      call color(2)
+      call polyline(xptemp(nbb),yptemp(nbb),imax-2*nbb)
       call color(1);
       call polyline(z(:,2),vz(:,2)**2/2.-phip(:,2),imax)
       call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
@@ -179,7 +216,7 @@ contains
 
       do i=1,nzplot
          zplot(i)=zmin+(zmax-zmin)*(i-1.)/(nzplot-1)
-         psiplot(i)=-psiofrz(r(1,1),zplot(i))
+         psiplot(i)=-phiofrz(r(1,1),zplot(i))
 !         psiplot(i)=-psi/cosh(zplot(i)/4.)**4
       enddo
       call pltinit(zmin,zmax,-psi-.2*psi,0.03)
@@ -190,8 +227,10 @@ contains
       call ticrev; call altyaxis(Eropsi,Eropsi); call ticrev
       call axptset(0.,0.)
       call jdrwstr(.03,wy2ny(-.5*psi),'W!d!A|!@!d',-1.)
-      call jdrwstr(.12,wy2ny(-.2*psi),'-!Af!@',1.)
+            call jdrwstr(.12,wy2ny(-.2*psi),'-!Af!@',1.)
       call jdrwstr(.96,wy2ny(-.2*psi),'-E!dr!d',-1.)
+      call color(2)
+      call jdrwstr(.03,wy2ny(0.01),'!p!o-!o!qW!d!A|!@!d',-0.1);call color(15)
       call winset(.true.)
       call polyline(zplot,psiplot,nzplot)
       call color(1);
@@ -199,6 +238,8 @@ contains
 !      call polymark(z(:,2),vz(:,2)**2/2.-phip(:,2),1,1)
       call color(4); call polyline(z,vz**2/2.-phip,imax)
 !      call polymark(z,vz**2/2.-phip,1,1)
+      call color(2)
+      call polyline(xptemp(nbb),yptemp(nbb),imax-2*nbb)
       call color(15)
       call pltend
 
@@ -208,7 +249,11 @@ contains
       integer, dimension(2) :: imax
       if(lp)then; call pfset(3); else; call pfset(-3);
       endif
-      
+
+      nbb=nint(3.1415926/dtxb)
+      call boxcarave(imax,nbb,z,xptemp)
+      call boxcarave(imax,nbb,vz**2/2.-phip,yptemp)
+
       call multiframe(3,1,0)
       call autoplot(z,r,imax)
       call axlabels('z','r')
@@ -216,6 +261,9 @@ contains
       
       call autoplot(z,vz**2/2.-phip,imax)
       call axlabels('z','v!dz!d!u2!u/2-!Af!@')
+      call color(2)
+      call polyline(xptemp(nbb),yptemp(nbb),imax-2*nbb);call color(15)
+
 !      call pltend
 
       call autoplot(z,psi/cosh(z/4.)**4,imax)
@@ -223,14 +271,22 @@ contains
 
       call multiframe(4,1,0)
       call autoplot(tv,vz**2/2.-phip,imax)
+      call color(2)
+      call polyline(tv(nbb,1),yptemp(nbb),imax-2*nbb);call color(15)
       call axlabels('t','v!dz!d!u2!u/2-!Af!@')
 !      call pltend
 
-      call autoplot(tv,vz**2/2.-psi/cosh(z/4.)**4,imax)
+      do i=1,imax(1)
+         xptemp(i)=vz(i,1)**2/2.-phiofrz(r0,z(i,1))
+      enddo
+      call autoplot(tv,xptemp,imax)
       call axlabels('t','v!dz!d!u2!u/2-!Af!@(r=r0)')
 !      call pltend
-      
-      call autoplot(tv,(w-w0),imax)
+
+! This form supposes w to be exactly w0 on first step, but it isn't      
+!      call autoplot(tv,(w-w0),imax)
+! So this form is better for testing energy conservation:
+      call autoplot(tv,(w-w(1,1)),imax)
       call axlabels('t','Dw')
 !      call pltend
       
@@ -294,6 +350,11 @@ contains
       lphibuiltin=.true.
 !      stop
     end subroutine inputphi
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine potlntilde
+! Contours of Potential and n-tilde       
+  end subroutine potlntilde
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 end module orbitpoincare
 !*********************************************************************
 !***********************************************************************
@@ -441,7 +502,7 @@ subroutine orbitp
   real E(3)
 
   wpt=0.
-  phip1=psiofrz(y0(1),0.)
+  phip1=phiofrz(y0(1),0.)
   psi=phip1
   call getfield(y0,t,icase,E) ! Initializes more conveniently.
   if(.not.lphibuiltin)Eropsi=E(1)/phip1
@@ -452,10 +513,10 @@ subroutine orbitp
   else
      B=Bsqpsi*sqrt(psi)
   endif
-  dt=0.047/B
-!  dt=.01/B
+!  dt=0.047/B
+  dt=dtxb/B
   if(lprint)write(*,73)'w0=',w0,' Eropsi=',Eropsi,' Bsqpsi=',Bsqpsi,&
-       ' psi=',psi,' r0=',y0(1),' B=',B !,' rho0=', y0(4)/B
+       ' psi=',psi,' rinit=',y0(1),' B=',B !,' rho0=', y0(4)/B
 
   if(idoplots.ne.0)then
   if(lp)then
@@ -487,8 +548,8 @@ endif
      if(nwp.le.2)then
         wp0=-(2*k-1)*wpf*psi
      else
-!        wp0=-psi*(k/(nwp+1.))**alpha
-        wp0=-phip1*(k/(nwp+1.))**alpha ! Avoid problems with changing phip1
+!        wp0=-psi*(k/(nwp+1.))**aleph
+        wp0=-phip1*(k/(nwp+1.))**aleph ! Avoid problems with changing phip1
      endif
 ! Initial position (zero velocity)
      y1=y0
@@ -497,14 +558,13 @@ endif
      y1(4)=cos(vangle0*3.1415926/180.)*vmod0
      y1(5)=sin(vangle0*3.1415926/180.)*vmod0
      pt0=y1(1)*y1(5)-B*y1(1)**2/2.   ! r*vt-B*r^2/2. = p_theta
-! Approximate gyrocenter as the place where y0(5)=vtheta is zero, but
-! there is no such place when the orbit encircles r=0.
-!     r0=sqrt(-2.*pt0/B)
-! So better to say it is one gyro-radius away from particle (y1)
+! Approximate gyrocenter as one gyro-radius away from particle (y1)
 ! in frame rotating with ExB velocity v_tExB=-Er/Bz
      xg=y1(1)*cos(y1(2))-(y1(5)+E(1)/B)/B   ! r*cos(t) -(vt-vExB)/B
      yg=y1(1)*sin(y1(2))+y1(4)/B   ! r*sin(t) + vr/B
      r0=sqrt(xg**2+yg**2)
+     phip1=phiofrz(r0,0.)  ! This corrects phip1 for its first value
+     ! But causes a slight DW offset, removed by using w-w(1,1) not w-w0.
      if(lprint.and.k.eq.nwp)write(*,*)'rc0=',r0
      if(wp0+phip1.lt.0)then
         write(*,*)'NOT Starting with wp0',wp0,' below -phip1',-phip1
@@ -518,6 +578,7 @@ endif
      wpp=wp0
      do i=1,nstep
         if(i.le.nplot.and.k.le.2)then
+! Diagnostic arrays, only for up to 2 k-cases.
            r(i,k) =y1(1)
            th(i,k)=y1(2)
            z(i,k) =y1(3)
@@ -526,14 +587,31 @@ endif
            vr(i,k)=y1(4)
            vt(i,k)=y1(5)
            vz(i,k)=y1(6)
-           phip(i,k)=psiofrz(y1(1),y1(3))
+           phip(i,k)=phiofrz(y1(1),y1(3))
            Ep(i,k)=Eropsi*phip(i,k)
            w(i,k)=(vr(i,k)**2+vt(i,k)**2+vz(i,k)**2)/2.-phip(i,k)
            pt(i,k)=r(i,k)*vt(i,k)-B*r(i,k)**2/2.
            tv(i,k)=t
            imax(k)=i
         endif
-        call RKADVC(dt,t,nvec,y1,irktype,y2,cond,IERR)
+        irktype=0
+        if(irktype.eq.1)then
+! Convert to and from local cartesian. Does not work.
+           yt=y1(2)
+           y1(2)=0.
+           call RKADVC(dt,t,nvec,y1,irktype,y2,cond,IERR)
+           dyt=atan2(y2(2),y2(1))
+           y2t=y2(2)
+           cdt=cos(dyt)
+           sdt=sin(dyt)
+           y2(2)=yt+dyt
+           y2(1)=sqrt(y2(1)**2+y2t**2)
+           y2r=   cdt*y2(4)+sdt*y2(5)
+           y2(5)=-sdt*y2(4)+cdt*y2(5)
+           y2(4)=y2r
+        else
+           call RKADVC(dt,t,nvec,y1,irktype,y2,cond,IERR)
+        endif
         phipi=phip1
         wpi=y2(6)**2/2.-phip1 ! Parallel energy at r0
         if(wpi*wpp.lt.0.)then
@@ -556,7 +634,7 @@ endif
            if(j.eq.nbouncemax)exit
            j=j+1
 !           write(*,*)r0,y2(3)
-           phip1=psiofrz(r0,y2(3)) ! Evaluate new phi at ~gyrocenter
+           phip1=phiofrz(r0,y2(3)) ! Evaluate new phi at ~gyrocenter
            f1=abs(y2(3))/(abs(y1(3))+abs(y2(3)))
            f2=abs(y1(3))/(abs(y1(3))+abs(y2(3)))
            tc(j)=t
@@ -729,7 +807,7 @@ program mainpoincare
      if(string(1:2).eq.'-f')read(string(3:),*)wpf
      if(string(1:2).eq.'-W')read(string(3:),*)W0
      if(string(1:2).eq.'-w')read(string(3:),*)wn0
-     if(string(1:2).eq.'-a')read(string(3:),*)alpha
+     if(string(1:2).eq.'-a')read(string(3:),*)aleph
      if(string(1:2).eq.'-v')read(string(3:),*)vangle0
      if(string(1:2).eq.'-c')lp=.not.lp
      if(string(1:2).eq.'-L')lo=.not.lo
@@ -752,11 +830,11 @@ program mainpoincare
   write(*,*)'Usage orbitpoincare [-flags] [filename]'
   write(*,*)'If filename is present, potential is read from it. Put last.' 
   write(*,*)'Otherwise builtin potential form is used. Flags set parameters.'
-  write(*,*)'-b... B/sqpsi, -p... psi, -q... sqrt(psi), -E... Er/psi, -r... r0'
+  write(*,*)'-b... B/sqpsi, -p... psi, -q... sqrt(psi), -E... Er/psi, -r... r(0)'
   write(*,*)'-W... W0 (total energy), -w ... w0 (normalized alternate)'
   write(*,*)'-O... Omega, resets actual B/sqpsi value; use after all -p'
   write(*,*)'-nw... N-energies [if 1 plot orbits], -f... the single energy'
-  write(*,*)'-a... set alpha power to concentrate wp values near zero. '
+  write(*,*)'-a... set aleph power to concentrate wp values near zero. '
   write(*,*)'-v... set vangle0 degrees of initial velocity to direction r/y.'
   write(*,*)'-ns... N-steps, -c run continuously, -d do not write, -h help'
 
