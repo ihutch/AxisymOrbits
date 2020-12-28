@@ -510,6 +510,7 @@ subroutine orbitp
   if(iwritetype.eq.1)then
      Bsqpsi=Omega/sqrt(psi)
      B=Omega
+!          write(*,*)'Bsqpsi',Bsqpsi,Omega,psi
   else
      B=Bsqpsi*sqrt(psi)
   endif
@@ -595,23 +596,7 @@ endif
            imax(k)=i
         endif
         irktype=0
-        if(irktype.eq.1)then
-! Convert to and from local cartesian. Does not work.
-           yt=y1(2)
-           y1(2)=0.
-           call RKADVC(dt,t,nvec,y1,irktype,y2,cond,IERR)
-           dyt=atan2(y2(2),y2(1))
-           y2t=y2(2)
-           cdt=cos(dyt)
-           sdt=sin(dyt)
-           y2(2)=yt+dyt
-           y2(1)=sqrt(y2(1)**2+y2t**2)
-           y2r=   cdt*y2(4)+sdt*y2(5)
-           y2(5)=-sdt*y2(4)+cdt*y2(5)
-           y2(4)=y2r
-        else
-           call RKADVC(dt,t,nvec,y1,irktype,y2,cond,IERR)
-        endif
+        call RKADVC(dt,t,nvec,y1,irktype,y2,cond,IERR)
         phipi=phip1
         wpi=y2(6)**2/2.-phip1 ! Parallel energy at r0
         if(wpi*wpp.lt.0.)then
@@ -633,14 +618,13 @@ endif
         if(y2(3)*y1(3).le.0)then ! We crossed the z=0 center.
            if(j.eq.nbouncemax)exit
            j=j+1
-!           write(*,*)r0,y2(3)
            phip1=phiofrz(r0,y2(3)) ! Evaluate new phi at ~gyrocenter
            f1=abs(y2(3))/(abs(y1(3))+abs(y2(3)))
            f2=abs(y1(3))/(abs(y1(3))+abs(y2(3)))
            tc(j)=t
            wp(j)= f1*(y1(6)**2/2.-phipi) &  ! old
                  +f2*(y2(6)**2/2.-phip1)    ! new
-           xi(j)=atan2(y1(5),y1(4))
+           xi(j)=atan2(y1(5),y1(4)) ! atan(vt/vr)
         endif
         t=t+dt
         y1=y2
