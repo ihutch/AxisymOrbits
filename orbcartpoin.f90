@@ -12,7 +12,7 @@ module orbcartpoin
   real, dimension(npmmax,nerpmax,2) :: omegaplot
   integer :: nerp=1,npm=npmmax   ! n Eropsi's, psi divisions of psimax
   logical :: lp=.true.,lprint=.true.,lo=.true.,lpi=.false.
-  logical :: lgread=.false.,lhread=.false.
+  logical :: lgread=.false.,lhread=.false.,lpg=.true.
   integer, parameter :: nbouncemax=200  ! Max bounces to store.
   integer, parameter :: nplot=25000     ! Max steps to store.
   integer, parameter :: nvec=6
@@ -107,6 +107,7 @@ contains
       zs=(zh-zg(0))/zrf
       zsa=abs(zs)
       ys=(rh-yg(0))/yrf
+      if(ys.lt.0)write(*,*)'phiofrz rh negative',rh
 !Interpolate within grid limits
       phiofrz=bilin2d(phiguarded,nzf,nzf,nyf,min(1.,zsa),min(1.,ys))
 ! Possibly project beyond grid with exponential decay.
@@ -174,8 +175,8 @@ contains
       call multiframe(3,1,0)
       zmin=-8.
       zmax=8.
-      call minmax(r(:,np),imax,rmin,rmax)
-      rmin=rmin-.3
+      call minmax(r(:,np),imax,rmin1,rmax)
+      rmin=rmin1-.3
       rmax=rmax+.3
       call minmax(vz(:,np)**2/2.-phip(:,np),imax(np),wmin,wmax)
 
@@ -233,9 +234,9 @@ contains
 
       do i=1,nzplot
          zlplot(i)=zmin+(zmax-zmin)*(i-1.)/(nzplot-1)
-         psicplot(i)=-phiofrz(rmin,zlplot(i))     ! At lowest r.
+         psicplot(i)=-phiofrz(rmin1,zlplot(i))    ! At lowest r.
 !         psilplot(i)=-phiofrz(r0,zlplot(i))      ! At initial r.
-         psilplot(i)=-phiofrz(rc0,zlplot(i))     ! At initial gyrocenter.
+         psilplot(i)=-phiofrz(rc0,zlplot(i))      ! At initial gyrocenter.
       enddo
       call pltinit(zmin,zmax,min(-psi-.2*psi,psicplot(nzplot/2)), &
            -psicplot(nzplot/2)*.2)
@@ -484,26 +485,18 @@ subroutine orbitp
   character*120 string
   integer, dimension(2) :: imax
   real E(3)
-
+  
   wpt=0.
+! Set B if necessary from phip1, and write out parameters.
+  call getfield(y0,t,irktype,E) ! Field at initial point.
   phip1=phiofrz(y0(1),0.)
-  psi=phip1
-  call getfield(y0,t,irktype,E) ! Initializes more conveniently.
-! We enter this point with w0,Bsqpsi,r,th,z set, vth=0 by default
-  if(iwritetype.eq.1)then
-     Bsqpsi=Omega/sqrt(psi)
-     B=Omega
-!     write(*,*)'Bsqpsi',Bsqpsi,Omega,psi
+  if(iwritetype.ne.1)then
+     B=Bsqpsi*sqrt(phip1)   ! Bsqpsi at point determines B.
   else
-     B=Bsqpsi*sqrt(psi)
+     Bsqpsi=B/sqrt(phip1)   ! B at point determines Bsqpsi.
   endif
-!  dt=0.047/B
   dt=dtxb/B
-  if(lprint)write(*,'(a,f4.1,a,f5.2,a,f6.3,a,f5.2,a,f6.3,$)') &
-       'w0=',w0,' Bsqpsi=',Bsqpsi,&
-       ' psi=',psi,' r0=',y0(1),' B=',B !,' rho0=', y0(4)/B
-
-  if(idoplots.ne.0)then
+  if(idoplots.ne.0)then  ! Set up Poincare plot
      if(lp)then
         call pfset(3)    ! Display and output plots
      else
@@ -517,19 +510,19 @@ subroutine orbitp
   endif
 
 
-  psic=psi
+  psic=phip1 ! Will be updated in a moment.
   do k=1,nwp
      t=0.
+! Set parallel energy
      if(nwp.le.2)then
         wp0=-(2*k-1)*wpf*psic
      else
-!        wp0=-k*psi/(nwp+1.)
         wp0=-psic*(k/(nwp+1.))**aleph
      endif
 ! Initial position (zero velocity)
      y1=y0
 ! Initial r/theta velocities
-     vmod0=sqrt(2.*(w0-wp0))
+     vmod0=sqrt(2.*(psic+w0-wp0))            ! Should add potential?
      y1(4)=cos(vangle0*3.1415926/180.)*vmod0
      y1(5)=sin(vangle0*3.1415926/180.)*vmod0
      pt0=y1(1)*y1(5)-B*y1(1)**2/2.   ! r*vt-B*r^2/2. = p_theta
@@ -546,11 +539,12 @@ subroutine orbitp
 !     phip1=phiofrz(rpave,y1(3))               ! at initial rpave case.
 
      if(k.eq.1)then
-        psic=phiofrz(rc0,0.)
-        if(lprint)write(*,'(a,f5.2,a,f5.3)')' rc0=',rc0,' psic=',psic
-! Thermal rho=1/B.
+        psic=phiofrz(rc0,0.)    ! Determines Wp range.
+        if(lprint)write(*,'(a,f4.1,a,f5.2,a,f5.3,a,f6.3,a,f6.3,a,f5.2,a,f5.3)')&
+             'w0=',w0,' Bsqpsi=',Bsqpsi,' r0=',y0(1),&
+             ' psic=',psic,' B=',B,' rc0=',rc0
         write(string,'(a,f5.3,a,f4.2,a,f5.3,a,f3.1,a,f4.2,a,f4.2)')&
-             'B=',Omega,' W=',w0,' !Ay!@=',psi,' r!d0!d=',y0(1), &
+             'B=',Omega,' W=',w0,' !Ay!@=',psic,' r!d0!d=',y0(1), &
              ' r!dc0!d=',rc0,' r!dg!d=',rg0
         
         if(idoplots.ne.0)call boxtitle(string(1:lentrim(string)))
@@ -562,7 +556,6 @@ subroutine orbitp
         goto 12
      endif
      y1(6)=sqrt(2.*(wp0+phip1))
-
      if(lprint)write(*,'(i3,a,f8.4,a,f8.4,$)')k,' Wp0=',wp0,' vz=',y1(6)
      j=0
      wpp=wp0
@@ -580,34 +573,25 @@ subroutine orbitp
            vz(i,k)=y1(6)
            phip(i,k)=phiofrz(r(i,k),y1(3))
            phir0(i,k)=phiofrz(rpave,y1(3))
-!           Ep(i,k)=Eropsi*phip(i,k) Not correct when read in.
            w(i,k)=(vr(i,k)**2+vt(i,k)**2+vz(i,k)**2)/2.-phip(i,k)
            tv(i,k)=t
            imax(k)=i
         endif
-   ! y1 etc are just (x,y,z,vx,vy,vz) and never change meaning.
+   ! y1,2 are just (x,y,z,vx,vy,vz) and never change meaning.
         call RKADVC(dt,t,nvec,y1,irktype,y2,cond,IERR)
-        phipi=phip1
-        wpi=y2(6)**2/2.-phip1 ! Parallel energy at r0
-        if(wpi*wpp.lt.0.)then
-           if(lprint.and..false.)write(*,'(a,i6,a,f8.4,a,i4,a)') &
-           ' Step=',i,' Wp sign flip' ,wpi,' after',j-1,' bounces'
-           wpt=-wp0/psi
-           wpp=wpi
-!           exit
-        endif
-        if((.not.abs(y2(3)).lt.20.)  &
-!             .or.(.not.abs(y2(1)).lt.2.*y0(1)) &  ! No good for low r.
+        wpi=y2(6)**2/2.-phiofrz(rc0,y1(3)) ! Parallel energy at rc0
+        if((.not.abs(y2(3)).lt.20.)  & ! Untrapped.
              .or..not.wpi.lt.10.)then
            if(lprint)write(*,'(a,i6,a,f6.2,a,f8.4,a,i4,a)')&
            ' Step=',i,' z=',y2(3), &
            ' Wp=',wpi,' after',j-1,' bounces'
-           wpt=-wp0/psi
+           wpt=-wp0/psic
            exit
         endif
-        if(y2(3)*y1(3).le.0)then ! We crossed the z=0 center.
+        if(y2(3)*y1(3).le.0)then ! Crossed the z=0 center. Document.
            if(j.eq.nbouncemax)exit
            j=j+1
+           phipi=phip1
            phip1=phiofrz(rc0,y2(3)) ! Evaluate new phi at initial gyrocenter
 !           phip1=phiofrz(rpave,y2(3)) ! Evaluate new phi at rpave
            f1=abs(y2(3))/(abs(y1(3))+abs(y2(3)))
@@ -618,13 +602,13 @@ subroutine orbitp
                  +f2*(y2(6)**2/2.-phip1)    ! new
            xi(j)=atan2(y1(5),y1(4)) ! This is absolute angle atan(vy/vx)
            xi(j)=xi(j)-atan2(y1(2),y1(1)) ! Subtract radial angle.
-           if(wp(j).lt.-phip1.or.wp(j).gt.0..and.j.le.30)  &
-            write(*,'(i5,a,f6.3,a,f8.4)')j,' xi=',xi(j),' wp/phip1=',wp(j)/phip1
+!           if(wp(j).lt.-phip1.or.wp(j).gt.0..and.j.le.30)  &
+!           write(*,'(i5,a,f6.3,a,f8.4)')j,' xi=',xi(j),' wp/phip1=',wp(j)/phip1
         endif
         t=t+dt
         y1=y2
      enddo
-     if((i.eq.nstep+1.or.j.eq.nbouncemax).and.lprint)then
+     if((i.eq.nstep+1.or.j.eq.nbouncemax).and.lprint)then ! Final print.
         write(*,'(a,i4,$)')' j=',j
         write(*,73)' tb/2=',t/(j-1.), &
              ' tcyc=',2.*3.1415926/B,' ratio=',t/(j-1.)*B/2/3.1415926 
@@ -635,24 +619,18 @@ subroutine orbitp
 12   continue
   enddo
   if(idoplots.ne.0)call pltend
-! This was the write used for the JGR plot
-!  write(*,'(3f7.4,a)')Bsqpsi,wpt,Eropsi*sqrt(2.*(w0/psi-wpt)) &
-!       ,'   b,wpt,Ervopsi3'
   if(iwritetype.eq.0)then
-     write(*,'(4f10.4,a)')Bsqpsi,psi,wpt,y1(1),'  Bsqpsi,psi,wpt,rfinal'
+     write(*,'(4f10.4,a)')Bsqpsi,psic,wpt,y1(1),'  Bsqpsi,psi,wpt,rfinal'
   elseif(iwritetype.eq.1)then
-     write(*,'(5f10.4,a)')Omega,psi,wpt,y1(1),Bsqpsi,'  Omega,psi,wpt,rfinal,Bsqp'
+     write(*,'(5f10.4,a)')Omega,psic,wpt,y1(1),Bsqpsi,'  Omega,psi,wpt,rfinal,Bsqp'
   endif
-  do n=2,10,2
-     wpr=((2.*B**2/n**2)**(-0.25)+1-2.**.25)**(-4)
-  enddo
   
   if(nwp.le.2.and.idoplots.ge.2)call doplots2(imax,wp0,w0,pt0) 
   if(nwp.le.2.and.idoplots.ge.1)call doplots(imax,wp0,w0,pt0)  
 
-!  583 format(i5,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3,a,f8.3)
   73 format(a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3)
 end subroutine orbitp
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine profilemin
   ! A modification of orbitmin so that the psi range is a range
@@ -731,6 +709,166 @@ subroutine profilemin
   call pltend
 end subroutine profilemin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine orbitc
+! Specifies gyrocenter rather than initial position, and takes the
+! vangle and W0 to be in the drift-rotating frame using E(rc)/B
+  use orbcartpoin
+  character*120 string
+  integer, dimension(2) :: imax
+  real E(3)
+  
+  wpt=0.
+! Set E and B if necessary from phip1
+  call getfield(y0,t,irktype,E) ! Field at initial point.
+  phip1=phiofrz(y0(1),0.)  ! Suppose y0(1) is gyrocenter.
+  if(iwritetype.ne.1)then
+     B=Bsqpsi*sqrt(phip1)   ! Bsqpsi at point determines B.
+  else
+     Bsqpsi=B/sqrt(phip1)   ! B at point determines Bsqpsi.
+  endif
+  dt=dtxb/B
+  if(idoplots.ne.0)then  ! Set up Poincare plot
+     if(lp)then
+        call pfset(3)    ! Display and output plots
+     else
+        call pfset(-3)   ! Run continuously outputing plots
+     endif
+     call pltinit(-.99999,1.,-1.,0.)
+     call charsize(.018,.018)
+     call axis
+     call axis2
+     call axlabels('!Ac!@/!Ap!@','W!d!A|!@!d(r!dc0!d)/!Ay!@(r!dc0!d)')
+  endif
+
+  psic=phip1
+  do k=1,nwp
+     t=0.
+! Set parallel energy
+     if(nwp.le.2)then
+        wp0=-(2*k-1)*wpf*psic
+     else
+        wp0=-psic*(k/(nwp+1.))**aleph
+     endif
+! Initial position
+     y1=y0   
+! Initial x/y velocities in the drift frame.
+     vmod0=sqrt(2.*(psic+w0-wp0))  ! Should add potential?
+     y1(4)=cos(vangle0*3.1415926/180.)*vmod0
+     y1(5)=sin(vangle0*3.1415926/180.)*vmod0
+     rg0=vmod0/B                   ! gyro-radius
+! If gyrocenter is at y=0, then
+     xg=y1(1)
+     yg=0
+     rc0=sqrt(xg**2+yg**2)                            ! gyro-center radius
+! and the particle is at
+     y1(1)=xg+y1(5)/B
+     y1(2)=yg-y1(4)/B
+     rpmax=rc0+rg0
+     rpmin=abs(rc0-rg0)
+     rpave=(rpmax+rpmin)/2.
+! Transform initial velocities to rest frame by adding drift (at gc)
+     y1(4)=y1(4)+E(2)/B  ! Should not be needed because E(2)=0
+     y1(5)=y1(5)-E(1)/B
+! Now in rest-frame
+!     write(*,'(6f8.4)')y1
+     pt0=y1(1)*y1(5)-B*y1(1)**2/2.   ! r*vt-B*r^2/2. = p_theta
+     phip1=phiofrz(rc0,y1(3))               ! at initial gc case.
+
+     if(k.eq.1)then
+        psic=phiofrz(rc0,0.)    ! Determines Wp range.
+        if(lprint)write(*,'(a,f4.1,a,f5.2,a,f5.3,a,f6.3,a,f6.3,a,f5.2,a,f5.3)')&
+             'w0=',w0,' Bsqpsi=',Bsqpsi,' x0=',y1(1),&
+             ' psic=',psic,' B=',B,' rc0=',rc0
+        write(string,'(a,f5.3,a,f4.2,a,f5.3,a,f4.1,a,f4.2,a,f4.2)')&
+             'B=',Omega,' W=',w0,' !Ay!@=',psic, & !' x!d0!d=',y1(1), &
+             ' r!dc0!d=',rc0,' r!dg!d=',rg0
+        
+        if(idoplots.ne.0)call boxtitle(string(1:lentrim(string)))
+        call winset(.true.)
+     endif
+     if(wp0+phip1.lt.0)then
+        write(*,*)'NOT Starting with wp0',wp0,' below -phip1',-phip1
+        write(*,*)'at rc0=',rc0,' z0=',y0(3)
+        goto 12
+     endif
+     y1(6)=sqrt(2.*(wp0+phip1))
+     if(lprint)write(*,'(i3,a,f8.4,a,f8.4,$)')k,' Wp0=',wp0,' vz=',y1(6)
+     j=0
+     wpp=wp0
+     do i=1,nstep
+        if(i.le.nplot.and.k.le.2)then
+           r(i,k) =sqrt(y1(1)**2+y1(2)**2)
+           th(i,k)=atan2(y1(2),y1(1))
+           pt(i,k)=r(i,k)*(-y1(4)*sin(th(i,k))+y1(5)*cos(th(i,k))) &
+                -B*r(i,k)**2/2.
+           z(i,k) =y1(3)
+           xplot(i,k)=r(i,k)*cos(th(i,k))
+           yplot(i,k)=r(i,k)*sin(th(i,k))
+           vr(i,k)=y1(4)
+           vt(i,k)=y1(5)
+           vz(i,k)=y1(6)
+           phip(i,k)=phiofrz(r(i,k),y1(3))
+           phir0(i,k)=phiofrz(rpave,y1(3))
+           w(i,k)=(vr(i,k)**2+vt(i,k)**2+vz(i,k)**2)/2.-phip(i,k)
+           tv(i,k)=t
+           imax(k)=i
+        endif
+   ! y1,2 are just (x,y,z,vx,vy,vz) and never change meaning.
+        call RKADVC(dt,t,nvec,y1,irktype,y2,cond,IERR)
+        wpi=y2(6)**2/2.-phiofrz(rc0,y1(3)) ! Parallel energy at rc0
+        if((.not.abs(y2(3)).lt.20.)  & ! Untrapped.
+             .or..not.wpi.lt.10.)then
+           if(lprint)write(*,'(a,i6,a,f6.2,a,f8.4,a,i4,a)')&
+           ' Step=',i,' z=',y2(3), &
+           ' Wp=',wpi,' after',j-1,' bounces'
+           wpt=-wp0/psic
+           exit
+        endif
+        if(y2(3)*y1(3).le.0)then ! Crossed the z=0 center. Document.
+           if(j.eq.nbouncemax)exit
+           j=j+1
+           phipi=phip1
+           phip1=phiofrz(rc0,y2(3)) ! Evaluate new phi at initial gyrocenter
+!           phip1=phiofrz(rpave,y2(3)) ! Evaluate new phi at rpave
+           f1=abs(y2(3))/(abs(y1(3))+abs(y2(3)))
+           f2=abs(y1(3))/(abs(y1(3))+abs(y2(3)))
+           tc(j)=t
+
+           wp(j)= f1*(y1(6)**2/2.-phipi) &  ! old
+                 +f2*(y2(6)**2/2.-phip1)    ! new
+           xi(j)=atan2(y1(5),y1(4)) ! This is absolute angle atan(vy/vx)
+           xi(j)=xi(j)-atan2(y1(2),y1(1)) ! Subtract radial angle.
+!           if(wp(j).lt.-phip1.or.wp(j).gt.0..and.j.le.30)  &
+!           write(*,'(i5,a,f6.3,a,f8.4)')j,' xi=',xi(j),' wp/phip1=',wp(j)/phip1
+        endif
+        t=t+dt
+        y1=y2
+     enddo
+     if((i.eq.nstep+1.or.j.eq.nbouncemax).and.lprint)then ! Final print.
+        write(*,'(a,i4,$)')' j=',j
+        write(*,73)' tb/2=',t/(j-1.), &
+             ' tcyc=',2.*3.1415926/B,' ratio=',t/(j-1.)*B/2/3.1415926 
+!             ,' rc0=',rc0
+     endif
+     if(idoplots.ne.0)call color(mod(k-1,14)+1)
+     if(idoplots.ne.0)call polymark(xi/3.1415926,wp/phip1,j-2,3)
+12   continue
+  enddo
+  if(idoplots.ne.0)call pltend
+  if(iwritetype.eq.0)then
+     write(*,'(4f10.4,a)')Bsqpsi,psic,wpt,y1(1),'  Bsqpsi,psi,wpt,rfinal'
+  elseif(iwritetype.eq.1)then
+     write(*,'(5f10.4,a)')Omega,psic,wpt,y1(1),Bsqpsi,'  Omega,psi,wpt,rfinal,Bsqp'
+  endif
+  
+  if(nwp.le.2.and.idoplots.ge.2)call doplots2(imax,wp0,w0,pt0) 
+  if(nwp.le.2.and.idoplots.ge.1)call doplots(imax,wp0,w0,pt0)  
+
+  73 format(a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3)
+
+end subroutine orbitc
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 program mainpoincare
   use orbcartpoin
   character*30 :: string
@@ -741,7 +879,8 @@ program mainpoincare
      if(string(1:2).eq.'-b')read(string(3:),*)Bsqpsi
      if(string(1:2).eq.'-O')then
         read(string(3:),*)Omega
-        Bsqpsi=Omega/sqrt(psi)  ! Maybe not necessary now.
+        Bsqpsi=Omega/sqrt(psi)
+        B=Omega
         iwritetype=1   ! Determines Omega setting has preference.
      endif
      if(string(1:2).eq.'-p')then
@@ -770,6 +909,7 @@ program mainpoincare
      if(string(1:2).eq.'-c')lp=.not.lp
      if(string(1:2).eq.'-L')lo=.not.lo
      if(string(1:2).eq.'-i')lpi=.not.lpi
+     if(string(1:2).eq.'-g')lpg=.not.lpg
      if(string(1:2).eq.'-d')lprint=.not.lprint
      if(string(1:2).eq.'-h')goto 201
      if(string(1:2).eq.'-?')goto 201
@@ -777,9 +917,9 @@ program mainpoincare
   if(nerp.gt.nerpmax)stop 'nerp specified too big'
   if(wn0.gt.-10.)w0=psi*wn0
   if(Omega.eq.0)Omega=Bsqpsi*sqrt(psi)
-
   if(wpm.eq.0)then
-     call orbitp
+     if(lpg)call orbitc
+     if(.not.lpg)call orbitp
   else            ! Find minimum confined
      call profilemin
   endif
