@@ -238,7 +238,7 @@ contains
 !         psilplot(i)=-phiofrz(r0,zlplot(i))      ! At initial r.
          psilplot(i)=-phiofrz(rc0,zlplot(i))      ! At initial gyrocenter.
       enddo
-      call pltinit(zmin,zmax,min(-psi-.2*psi,psicplot(nzplot/2)), &
+      call pltinit(zmin,zmax,psicplot(nzplot/2), &
            -psicplot(nzplot/2)*.2)
       call charsize(.015,.015)
       call axis
@@ -668,7 +668,9 @@ subroutine profilemin
 2       do j=1,nbscan     ! Scan to find first confined orbit
            Omega=bmax*j/nbscan
            Bsqpsi=Omega/sqrt(psi)
-           call orbitp
+!           write(*,*)'orbit call',j,Omega,Bsqpsi,lpg
+           if(lpg)call orbitc
+           if(.not.lpg)call orbitp
            if(wpt.eq.0)goto 1  ! A confined orbit.
         enddo
         bmax=bmax*1.5 !   If we did not find confined orbit, increment bmax
@@ -680,7 +682,8 @@ subroutine profilemin
            bb=(b2+b1)/2.
            Omega=bb
            Bsqpsi=Omega/sqrt(psi)
-           call orbitp
+           if(lpg)call orbitc
+           if(.not.lpg)call orbitp
            if(wpt.eq.0)then
               b2=bb
            else
@@ -688,7 +691,8 @@ subroutine profilemin
            endif
         enddo
         if(i.eq.1)rcr0=rc0
-        write(*,'(i3,a,f8.5,a,f8.4,a,f8.4)')i,' psi=',psi,' Omega=',bb
+        write(*,'(i3,a,f8.4,a,f8.5,a,f8.4,a,f8.4)') &
+             i,' rc0=',rc0,' psi=',psi,' Omega=',bb
         riplot(i,k)=ri
         psiplot(i,k)=psi
         omegaplot(i,k,1)=bb
@@ -696,10 +700,6 @@ subroutine profilemin
      call winset(.true.)
      call labeline(riplot,omegaplot(:,k,1),npm,thewpf,iwidth)
      call legendline(.7,.8,0,' !AW!@!dt!d')
-     call dashset(4)
-     call polyline([0.,rcr0],[1.,1.]*omegaplot(1,k,1),2)
-     call drcstr(' r!dg0!d')
-     call dashset(0)
   enddo
   call dashset(1)
   call color(1)
@@ -776,9 +776,9 @@ subroutine orbitc
 
      if(k.eq.1)then
         psic=phiofrz(rc0,0.)    ! Determines Wp range.
-        if(lprint)write(*,'(a,f4.1,a,f5.2,a,f5.3,a,f6.3,a,f6.3,a,f5.2,a,f5.3)')&
+        if(lprint)write(*,'(a,f4.1,a,f5.2,a,f5.3,a,f6.3,a,f6.3,a,f5.2,a,f5.2)')&
              'w0=',w0,' Bsqpsi=',Bsqpsi,' x0=',y1(1),&
-             ' psic=',psic,' B=',B,' rc0=',rc0
+             ' psic=',psic,' B=',B,' rc0=',rc0,' rg0=',rg0
         write(string,'(a,f5.3,a,f4.2,a,f5.3,a,f4.1,a,f4.2,a,f4.2)')&
              'B=',Omega,' W=',w0,' !Ay!@=',psic, & !' x!d0!d=',y1(1), &
              ' r!dc0!d=',rc0,' r!dg!d=',rg0
@@ -927,18 +927,26 @@ program mainpoincare
   
 201 continue
   write(*,*)'Usage orbcartpoin [flags] [filename]'
-  write(*,*)'-b... B/sqpsi, -p... psi, -q... sqrt(psi), -E... Er/psi, -r... r0'
-  write(*,*)'-W... W0 (total energy), -w ... w0 (normalized alternate)'
-  write(*,*)'-O... Omega, resets actual B, B/sqpsi value; use after all -p'
-  write(*,*)'-nw... N-energies [if 1 plot orbits], -f... the single energy'
-  write(*,*)'-a... set aleph power to concentrate wp values near zero. '
-  write(*,*)'-v... set vangle0 degrees of initial velocity to direction r/y.'
-  write(*,*)'-ns... N-steps, -c run continuously, -d do not write, -h help'
+  write(*,7)'-b... B/sqpsi, -p... psi, -q... sqrt(psi), -E... Er/psi, -r... r0'
+  write(*,7)'-W... W0 (total energy), -w ... w0 (normalized alternate)',W0
+  write(*,7)'-O... Omega, resets actual B, B/sqpsi value; use after all -p',Omega
+  write(*,8)'-nw... N-energies [if 1 plot orbits], -f... the single energy',nwp
+  write(*,7)'-a... set aleph power to concentrate wp values near zero. ',aleph
+  write(*,7)'-v... set vangle0 degrees of velocity to direction r/y. ',vangle0
+  write(*,'(a,i8)')'-ns... N-steps',nstep
 
-  write(*,*)'-mb[<wpm>,<psim>,<npm>] Find the minimum B that confines the orbit'
-  write(*,*)'      of fractional depth wpm, up to psimax [0.5], in npm steps [100]'
-  write(*,*)'-mE   set number of different cases (Eropsi,wpf) for -mb call.'
-  write(*,*)'-L    toggle plotting disruption/resonance scaling'
-  write(*,*)'-i    toggle plotting input phi contours'
+  write(*,7)'-mb[<wpm>,<psim>,<npm>] Find the minimum B that confines the orbit'
+  write(*,7)'      of fractional depth wpm, up to psimax [0.5], in npm steps [100]'
+  write(*,8)'-mE   set number of different cases (Eropsi,wpf) for -mb call.',nerp
+  write(*,9)'-L    toggle plotting disruption/resonance scaling',lo
+  write(*,9)'-i    toggle plotting input phi contours          ',lpi
+  write(*,9)'-g    toggle gyrocenter radius initialization.    ',lpg
+  write(*,6)'filename non-switch names potential to read: ', &
+       filename(1:lentrim(filename))
+  write(*,7)'-c run continuously, -d do not write, -h help'
+6 format(6a)  
+7 format(a,f7.3)
+8 format(a,i4)
+9 format(a,l4)
 end program mainpoincare
 
