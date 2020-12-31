@@ -8,9 +8,9 @@ module orbcartpoin
   real :: dtxb=0.04363     ! dt x Omega=2pi/(steps per cyclotron period=144)
   real :: yrfmax,zrfmax
   integer, parameter :: npmmax=100,nerpmax=20
-  real, dimension(npmmax,nerpmax) :: psiplot,riplot
+  real, dimension(npmmax,nerpmax) :: psiplot,riplot,wpplot,wmeanplot
   real, dimension(npmmax,nerpmax,2) :: omegaplot
-  integer :: nerp=1,npm=npmmax   ! n Eropsi's, psi divisions of psimax
+  integer :: iotype=0, nerp=1,npm=10  ! type, n Eropsi's, psi divisions
   logical :: lp=.true.,lprint=.true.,lo=.true.,lpi=.false.
   logical :: lgread=.false.,lhread=.false.,lpg=.true.
   integer, parameter :: nbouncemax=200  ! Max bounces to store.
@@ -687,6 +687,7 @@ subroutine orbitc
 ! Initial x/y velocities in the drift frame.
      vmod0=sqrt(2.*(psic+w0-wp0))  ! Should add potential?
      y1(4)=cos(vangle0*3.1415926/180.)*vmod0
+     y1(5)=sin(vangle0*3.1415926/180.)*vmod0
      rg0=vmod0/B                   ! gyro-radius
 ! If gyrocenter is at y=0, then
      xg=y1(1)
@@ -708,7 +709,7 @@ subroutine orbitc
 
      if(k.eq.1)then
         psic=phiofrz(rc0,0.)    ! Determines Wp range.
-        if(lprint)write(*,'(a,f5.2,a,f5.2,a,f5.3,a,f6.3,a,f6.3,a,f5.2,a,f5.2)')&
+        if(lprint)write(*,'(a,f5.2,a,f5.2,a,f6.3,a,f6.3,a,f6.3,a,f5.2,a,f5.2)')&
              'w0=',w0,' Bsqpsi=',Bsqpsi,' x0=',y1(1),&
              ' psic=',psic,' B=',B,' rc0=',rc0,' rg0=',rg0
         write(string,'(a,f5.3,a,f4.2,a,f5.3,a,f4.1,a,f4.2,a,f4.2)')&
@@ -878,6 +879,75 @@ subroutine profilemin
   call pltend
 end subroutine profilemin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine wploss
+  use orbcartpoin
+! Search for the parallel energy loss limit profile over radius.
+  integer :: nwiter=5
+
+  write(*,*)Omega,Bsqpsi
+  
+  nwp=1                ! Single orbits
+  iwritetype=2         ! No writing from orbitc
+  idoplots=0           ! No plotting from orbitc
+  phip1=phiofrz(r0,0.) ! Initialize potential and grid arrays.
+
+  k=1
+  do i=1,npm           ! Radial gyrocenter position
+     y0(1)=yrfmax*i/npm
+     psi=phiofrz(y0(1),0.)
+     Bsqpsi=Omega/sqrt(psi)
+     do j=1,nerp            ! wpsearch upward
+        wpf=1-(1-wpm)*j/nerp        
+        call orbitc         ! Follow the wpf orbit.
+        if(wpt.ne.0)goto 1  ! An unconfined orbit.
+     enddo
+     write(*,*)'Did not find unconfined orbit up to',-wpf
+     exit
+1    continue
+     if(j.eq.1)then
+        write(*,*)nerp
+        write(*,'(a,2i3,3f8.4)')'Lowest orbit is unconfined',i,j,wpf,wpm,y0(1)
+     else
+     ! Now j is unconfined, and j-1 is confined.
+        w2=wpf
+        w1=1-(1-wpm)*(j-1)/nerp
+        do j=1,nwiter
+           wpf=(w1+w2)/2.
+           call orbitc
+           if(wpt.eq.0)then; w1=wpf; else; w2=wpf
+           endif
+        enddo
+        if(wpt.ne.0)then; wpf=w1; call orbitc ! Last always confined.
+        endif
+     ! Now we have just run the highest confined orbit. Print/save result i
+
+        nbb=nint(3.1415926/dtxb)
+        rmean=0
+        wmean=0
+        ncyco=2*5
+        do ic=1,ncyco*nbb
+           rmean=rmean+r(ic,1)
+           psimean=phiofrz(r(ic,1),0.)
+           wmean=wmean+(vz(ic,1)**2/2.-phip(ic,1))
+        enddo
+        rmean=rmean/(ncyco*nbb)
+        wmean=wmean/(ncyco*nbb)/psi
+        write(*,'(2i3,a,f6.3,a,f6.3,a,f6.3,a,f8.4,a,f8.4)') &
+             k,i,' rc0=',rc0,' rg0=',rg0,' rmean=',rmean,' wmean=',wmean,' wpf=',wpf
+        riplot(i,k)=y0(1)
+        psiplot(i,k)=phiofrz(y0(1),0.)
+        wpplot(i,k)=wpf
+        wmeanplot(i,k)=wmean
+     endif
+  enddo
+  call autoplot(riplot,wmeanplot,i-1)
+  call axlabels('r','!p!o-!o!qW!d!A|!@!d/!Ay!@')
+  call pltend
+  
+end subroutine wploss
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 program mainpoincare
   use orbcartpoin
@@ -906,7 +976,15 @@ program mainpoincare
      endif
      if(string(1:3).eq.'-nw')read(string(4:),*)nwp
      if(string(1:3).eq.'-ns')read(string(4:),*)nstep
-     if(string(1:3).eq.'-mb')read(string(4:),*,end=103,err=103)wpm,psim,npm
+     if(string(1:3).eq.'-mb')then
+        iotype=1
+        read(string(4:),*,end=103,err=103)wpm,psim,npm
+     endif
+     if(string(1:3).eq.'-mw')then
+        iotype=2
+        nerp=10
+        read(string(4:),*,end=103,err=103)wpm,psim,npm
+     endif
      if(string(1:3).eq.'-mE')read(string(4:),*,end=103,err=103)nerp
 103  continue
      if(string(1:2).eq.'-E')read(string(3:),*)Eropsi
@@ -927,11 +1005,13 @@ program mainpoincare
   if(nerp.gt.nerpmax)stop 'nerp specified too big'
   if(wn0.gt.-10.)w0=psi*wn0
   if(Omega.eq.0)Omega=Bsqpsi*sqrt(psi)
-  if(wpm.eq.0)then
+  if(iotype.eq.0)then
      if(lpg)call orbitc
      if(.not.lpg)call orbitp
-  else            ! Find minimum confined
+  elseif(iotype.eq.1)then            ! Find minimum confined
      call profilemin
+  elseif(iotype.eq.2)then
+     call wploss
   endif
   call exit
   
@@ -946,7 +1026,7 @@ program mainpoincare
   write(*,'(a,i8)')'-ns... N-steps',nstep
 
   write(*,7)'-mb[<wpm>,<psim>,<npm>] Find the minimum B that confines the orbit'
-  write(*,7)'      of fractional depth wpm, up to psimax [0.5], in npm steps [100]'
+  write(*,7)'      of fractional depth wpm, up to psimax [0.5], in npm steps [10]'
   write(*,8)'-mE   set number of different cases (Eropsi,wpf) for -mb call.',nerp
   write(*,9)'-L    toggle plotting disruption/resonance scaling',lo
   write(*,9)'-i    toggle plotting input phi contours          ',lpi
