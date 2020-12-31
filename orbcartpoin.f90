@@ -181,6 +181,17 @@ contains
       call minmax(vz(:,np)**2/2.-phip(:,np),imax(np),wmin,wmax)
 
       nbb=nint(3.1415926/dtxb)
+      rmean=0
+      wmean=0
+      ncyco=2*3
+      do i=1,ncyco*nbb
+         rmean=rmean+r(i,1)
+         wmean=wmean+vz(i,1)**2/2.-phip(i,1)
+      enddo
+      rmean=rmean/(ncyco*nbb)
+      wmean=wmean/(ncyco*nbb)
+      write(*,*)'rc0,rmean,Wpmean',rc0,rmean,wmean
+
       call boxcarave(imax,nbb,z,xptemp)
       call boxcarave(imax,nbb,r,yptemp)
       call pltinit(zmin,zmax,rmin,rmax)
@@ -502,7 +513,7 @@ subroutine orbitp
      else
         call pfset(-3)   ! Run continuously outputing plots
      endif
-     call pltinit(-.99999,1.,-1.,0.)
+     call pltinit(-.99999,1.,-1.,max(0.,-2.*wpf))
      call charsize(.018,.018)
      call axis
      call axis2
@@ -631,84 +642,6 @@ subroutine orbitp
   73 format(a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3)
 end subroutine orbitp
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine profilemin
-  ! A modification of orbitmin so that the psi range is a range
-  ! of radial positions. And we still find threshold Omega for confinement. 
-  use orbcartpoin
-  integer, parameter :: nbscan=10,nbiter=7
-  real, dimension(npmmax) :: xioL,opp,ppp
-  character*40 thestr,thewpf
-  character*2 cel
-
-  cel='L '
-  OmegaLmax=Omega
-  phip1=phiofrz(r0,0.)
-  nwp=1
-  iwritetype=2         ! No writing from orbitp
-  idoplots=0
-
-  call pfset(3)
-  call pltinit(0.,yrfmax,0.,OmegaLmax)
-  call charsize(.018,.018)
-  call axis
-  call axis2
-  call axlabels('r',' ')
-  call fwrite(wpm,iwidth,2,thewpf)
-  call boxtitle('W!d!A|!@!d/!Ay!@='//thewpf(1:lentrim(thewpf)))
-  do k=1,nerp
-     wpf=1-(1-wpm)*k/nerp
-     call fwrite(wpf,iwidth,2,thewpf)
-     do i=1,npm   ! Here we have a range of r-positions.
-        ri=(i-0.5)*yrfmax/npm
-        psi=phiofrz(ri,0.)
-        y0(1)=ri
-        bmax=max(OmegaLmax,sqrt(psi))
-!     write(*,*)ri,psi,wpf
-2       do j=1,nbscan     ! Scan to find first confined orbit
-           Omega=bmax*j/nbscan
-           Bsqpsi=Omega/sqrt(psi)
-!           write(*,*)'orbit call',j,Omega,Bsqpsi,lpg
-           if(lpg)call orbitc
-           if(.not.lpg)call orbitp
-           if(wpt.eq.0)goto 1  ! A confined orbit.
-        enddo
-        bmax=bmax*1.5 !   If we did not find confined orbit, increment bmax
-        goto 2
-1       continue
-        b2=bmax*(j)/nbscan
-        b1=bmax*(j-1)/nbscan
-        do j=1,nbiter          ! Iterate to refine the threshold omega.
-           bb=(b2+b1)/2.
-           Omega=bb
-           Bsqpsi=Omega/sqrt(psi)
-           if(lpg)call orbitc
-           if(.not.lpg)call orbitp
-           if(wpt.eq.0)then
-              b2=bb
-           else
-              b1=bb
-           endif
-        enddo
-        if(i.eq.1)rcr0=rc0
-        write(*,'(i3,a,f8.4,a,f8.5,a,f8.4,a,f8.4)') &
-             i,' rc0=',rc0,' psi=',psi,' Omega=',bb
-        riplot(i,k)=ri
-        psiplot(i,k)=psi
-        omegaplot(i,k,1)=bb
-     enddo
-     call winset(.true.)
-     call labeline(riplot,omegaplot(:,k,1),npm,thewpf,iwidth)
-     call legendline(.7,.8,0,' !AW!@!dt!d')
-  enddo
-  call dashset(1)
-  call color(1)
-  call polyline(riplot,psiplot,npm)
-  call legendline(.01,.03,0,' !Ay!@')
-  call dashset(0)
-  call pltend
-end subroutine profilemin
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine orbitc
 ! Specifies gyrocenter rather than initial position, and takes the
 ! vangle and W0 to be in the drift-rotating frame using E(rc)/B
@@ -733,7 +666,7 @@ subroutine orbitc
      else
         call pfset(-3)   ! Run continuously outputing plots
      endif
-     call pltinit(-.99999,1.,-1.,0.)
+     call pltinit(-.99999,1.,-1.,max(0.,-2.*wpf))
      call charsize(.018,.018)
      call axis
      call axis2
@@ -754,7 +687,6 @@ subroutine orbitc
 ! Initial x/y velocities in the drift frame.
      vmod0=sqrt(2.*(psic+w0-wp0))  ! Should add potential?
      y1(4)=cos(vangle0*3.1415926/180.)*vmod0
-     y1(5)=sin(vangle0*3.1415926/180.)*vmod0
      rg0=vmod0/B                   ! gyro-radius
 ! If gyrocenter is at y=0, then
      xg=y1(1)
@@ -770,13 +702,13 @@ subroutine orbitc
      y1(4)=y1(4)+E(2)/B  ! Should not be needed because E(2)=0
      y1(5)=y1(5)-E(1)/B
 ! Now in rest-frame
-!     write(*,'(6f8.4)')y1
-     pt0=y1(1)*y1(5)-B*y1(1)**2/2.   ! r*vt-B*r^2/2. = p_theta
+    ! r*vt-B*r^2/2. = p_theta
+     pt0=y1(1)*y1(5)-y1(2)*y1(4)-B*(y1(1)**2+y1(2)**2)/2.
      phip1=phiofrz(rc0,y1(3))               ! at initial gc case.
 
      if(k.eq.1)then
         psic=phiofrz(rc0,0.)    ! Determines Wp range.
-        if(lprint)write(*,'(a,f4.1,a,f5.2,a,f5.3,a,f6.3,a,f6.3,a,f5.2,a,f5.2)')&
+        if(lprint)write(*,'(a,f5.2,a,f5.2,a,f5.3,a,f6.3,a,f6.3,a,f5.2,a,f5.2)')&
              'w0=',w0,' Bsqpsi=',Bsqpsi,' x0=',y1(1),&
              ' psic=',psic,' B=',B,' rc0=',rc0,' rg0=',rg0
         write(string,'(a,f5.3,a,f4.2,a,f5.3,a,f4.1,a,f4.2,a,f4.2)')&
@@ -867,6 +799,84 @@ subroutine orbitc
   73 format(a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3,a,f7.3)
 
 end subroutine orbitc
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine profilemin
+  ! A modification of orbitmin so that the psi range is a range
+  ! of radial positions. And we still find threshold Omega for confinement. 
+  use orbcartpoin
+  integer, parameter :: nbscan=10,nbiter=7
+  real, dimension(npmmax) :: xioL,opp,ppp
+  character*40 thestr,thewpf
+  character*2 cel
+
+  cel='L '
+  OmegaLmax=Omega
+  phip1=phiofrz(r0,0.)
+  nwp=1
+  iwritetype=2         ! No writing from orbitp
+  idoplots=0
+
+  call pfset(3)
+  call pltinit(0.,yrfmax,0.,OmegaLmax)
+  call charsize(.018,.018)
+  call axis
+  call axis2
+  call axlabels('r',' ')
+  call fwrite(wpm,iwidth,2,thewpf)
+  call boxtitle('W!d!A|!@!d/!Ay!@='//thewpf(1:lentrim(thewpf)))
+  do k=1,nerp
+     wpf=1-(1-wpm)*k/nerp
+     call fwrite(wpf,iwidth,2,thewpf)
+     do i=1,npm   ! Here we have a range of r-positions.
+        ri=(i-0.5)*yrfmax/npm
+        psi=phiofrz(ri,0.)
+        y0(1)=ri
+        bmax=max(OmegaLmax,sqrt(psi))
+!     write(*,*)ri,psi,wpf
+2       do j=1,nbscan     ! Scan to find first confined orbit
+           Omega=bmax*j/nbscan
+           Bsqpsi=Omega/sqrt(psi)
+!           write(*,*)'orbit call',j,Omega,Bsqpsi,lpg
+           if(lpg)call orbitc
+           if(.not.lpg)call orbitp
+           if(wpt.eq.0)goto 1  ! A confined orbit.
+        enddo
+        bmax=bmax*1.5 !   If we did not find confined orbit, increment bmax
+        goto 2
+1       continue
+        b2=bmax*(j)/nbscan
+        b1=bmax*(j-1)/nbscan
+        do j=1,nbiter          ! Iterate to refine the threshold omega.
+           bb=(b2+b1)/2.
+           Omega=bb
+           Bsqpsi=Omega/sqrt(psi)
+           if(lpg)call orbitc
+           if(.not.lpg)call orbitp
+           if(wpt.eq.0)then
+              b2=bb
+           else
+              b1=bb
+           endif
+        enddo
+        if(i.eq.1)rcr0=rc0
+        write(*,'(i3,a,f8.4,a,f8.5,a,f8.4,a,f8.4)') &
+             i,' rc0=',rc0,' psi=',psi,' Omega=',bb
+        riplot(i,k)=ri
+        psiplot(i,k)=psi
+        omegaplot(i,k,1)=bb
+     enddo
+     call winset(.true.)
+     call labeline(riplot,omegaplot(:,k,1),npm,thewpf,iwidth)
+     call legendline(.7,.8,0,' !AW!@!dt!d')
+  enddo
+  call dashset(1)
+  call color(1)
+  call polyline(riplot,psiplot,npm)
+  call legendline(.01,.03,0,' !Ay!@')
+  call dashset(0)
+  call pltend
+end subroutine profilemin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 program mainpoincare
